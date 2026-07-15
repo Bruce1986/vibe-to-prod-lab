@@ -2,10 +2,10 @@
 
 ## Repo 一次性設定
 
-- [x] 建 repo：`Bruce1986/vibe-to-prod-lab`（public）
-- [ ] Settings → General → 勾 **Template repository**（學員用 Use this template）
-- [ ] Settings → Pages → Source 選 **GitHub Actions**（slides.yml 需要）
-- [ ] 跑一次 `slides` workflow，確認 Pages 網址：
+- [x] 建 repo：`Bruce1986/vibe-to-prod-lab`（public，2026-07-15）
+- [x] Template repository flag（2026-07-15 由 API 設定）
+- [x] Pages Source＝GitHub Actions（2026-07-15 由 API 設定）
+- [x] `slides` workflow 首跑成功，Pages 上線（HTTP 200）：
       `https://bruce1986.github.io/vibe-to-prod-lab/`
 - [ ] （可選）About 欄位補課程說明與 Pages 連結
 
@@ -24,8 +24,9 @@
 - [ ] Claude Code：`@AGENTS.md` 橋接與 skills 觸發
 - [ ] Windows 實機：venv＋pytest；Phoenix `pip install arize-phoenix` ＋
       `phoenix serve`（含 6006 port 防火牆）
-- [ ] `gh workflow run eval-live.yml` 實跑一次：GitHub Models 額度、
-      `github:openai/gpt-4o-mini` 模型還在不在（模型清單會變動）
+- [x] `gh workflow run eval-live.yml` 首測（2026-07-15）：**3/3 PASS**，
+      gpt-4o-mini 連幻覺誘餌都正確忽略——課前一週再複測一次（模型清單會變動），
+      並考慮加一題更難的誘餌，讓「紅色也是資訊」的橋段有戲唱
 - [ ] HHEM／LettuceDetect 模型在講師機預下載快取；MiniCheck 770M CPU
       延遲實測（太慢就降級為投影片）
 - [ ] promptfoo 0.121.x 是否有 breaking change；必要時調 pin 版本
