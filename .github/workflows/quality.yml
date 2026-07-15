@@ -1,0 +1,53 @@
+# 品質管線（單元三的活教材）：lint-test → golden-eval → deploy-gate
+# 三關各擋一種壞：程式壞掉（pytest）、prompt 壞掉（golden eval）、壞的不准部署（gate）
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 安裝相依
+        run: pip install -r requirements.txt
+      - name: Lint（ruff）
+        run: ruff check app tests labs
+      - name: 測試（單元／整合／契約／golden）
+        run: |
+          python -m pytest -q
+          echo "### ✅ pytest 全綠（單元／整合／契約／golden）" >> "$GITHUB_STEP_SUMMARY"
+
+  golden-eval:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    env:
+      PROMPTFOO_DISABLE_TELEMETRY: "1"
+      PROMPTFOO_DISABLE_UPDATE: "1"
+      PROMPTFOO_DISABLE_SHARING: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Golden dataset 回歸（promptfoo，mock 回放、零 API key）
+        working-directory: labs/lab2-golden-eval
+        run: |
+          npx -y promptfoo@0.121.19 eval -c promptfooconfig.yaml --no-progress-bar
+          echo "### ✅ golden-eval 通過" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-gate:
+    needs: [lint-test, golden-eval]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 部署閘門（示範）
+        run: |
+          echo "所有品質關卡通過。真專案在這一步接部署（Pages／Cloud Run／k8s…）。"
+          echo "### 🚀 deploy-gate 綠燈——紅燈時這一關不會執行，這就是 gate" >> "$GITHUB_STEP_SUMMARY"

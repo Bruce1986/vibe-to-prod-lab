@@ -1,0 +1,8 @@
+[
+  { "input": "我要一杯大杯珍珠奶茶，半糖少冰", "field": "items.0.sweetness", "expect": 50 },
+  { "input": "兩杯中杯紅茶拿鐵，全糖正常冰，加波霸", "field": "items.0.quantity", "expect": 2 },
+  { "input": "一杯熱的紅茶拿鐵，微冰", "field": "items.0.ice", "expect": "熱" },
+  { "input": "一杯大杯珍珠奶茶全糖去冰，加跳跳糖", "field": "items.0.toppings", "not_contains": "跳跳糖" },
+  { "input": "三杯冬瓜茶無糖去冰", "field": "items.0.quantity", "expect": 3 },
+  { "input": "來點好喝的", "field": "status", "expect": "need_clarification" }
+]

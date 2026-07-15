@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# 加分關（/live-eval）：用 GitHub Models 免 API key 打「真」LLM，
+# 看真模型的輸出過不過我們的契約與 golden 斷言。
+# 只在 GitHub Actions 上跑（eval-live.yml，workflow_dispatch 手動觸發），
+# 需要 GITHUB_TOKEN 與 models: read 權限；免費層 rate limit 低，測資刻意只放 3 筆。
+description: boba-bot live eval（GitHub Models、免 key）
+
+prompts:
+  - file://../../app/prompts/order_prompt.txt
+
+providers:
+  - id: github:openai/gpt-4o-mini
+
+defaultTest:
+  assert:
+    - type: is-json
+      value: file://../../app/schemas/order.schema.json
+
+tests: file://tests.live.yaml

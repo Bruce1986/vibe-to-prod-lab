@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node / promptfoo
+node_modules/
+.promptfoo/
+promptfoo-errors.log
+
+# 建置輸出
+site/
+output.json
+llm_calls.jsonl
+
+# OS / 編輯器
+.DS_Store
+.idea/

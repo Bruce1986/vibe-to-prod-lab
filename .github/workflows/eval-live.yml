@@ -1,0 +1,37 @@
+# 加分關（/live-eval）：GitHub Models 免 API key 打真 LLM。
+# 手動觸發（workflow_dispatch）；紅色不是壞事，是不可預測性被量測到。
+name: eval-live
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  models: read
+
+jobs:
+  live-eval:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      PROMPTFOO_DISABLE_TELEMETRY: "1"
+      PROMPTFOO_DISABLE_UPDATE: "1"
+      PROMPTFOO_DISABLE_SHARING: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 真 LLM 評測（GitHub Models）
+        working-directory: labs/lab2-golden-eval
+        run: |
+          EXIT=0
+          npx -y promptfoo@0.121.19 eval -c promptfooconfig.live.yaml --no-progress-bar || EXIT=$?
+          {
+            echo "### 🎯 live-eval 完成"
+            echo ""
+            echo "- 綠＝真模型通過我們的契約與 golden 斷言"
+            echo "- 紅＝不可預測性被量測到——這正是單元二存在的理由"
+            echo "- GitHub Models 免費層 rate limit 低，請勿短時間連續觸發"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$EXIT"

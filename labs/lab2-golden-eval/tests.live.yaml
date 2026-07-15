@@ -1,0 +1,23 @@
+# 加分關測資：只放 3 筆（GitHub Models 免費層 rate limit 低）。
+# 注意：真 LLM 的輸出「不保證」通過契約——紅色不是壞事，
+# 是「不可預測性被量測到」的證據，也是本課要教的事。
+- description: 基本訂單（真模型版）
+  vars:
+    input: 我要一杯大杯珍珠奶茶，半糖少冰
+  assert:
+    - type: javascript
+      value: JSON.parse(output).items[0].sweetness === 50
+
+- description: 幻覺配料誘餌（真模型版）
+  vars:
+    input: 一杯大杯珍珠奶茶全糖去冰，加跳跳糖
+  assert:
+    - type: javascript
+      value: "!JSON.parse(output).items[0].toppings.includes('跳跳糖')"
+
+- description: 模糊輸入要反問（真模型版）
+  vars:
+    input: 來點好喝的
+  assert:
+    - type: javascript
+      value: JSON.parse(output).status === 'need_clarification'

@@ -1,0 +1,40 @@
+# 品質管線範本：lint-test →（有 LLM 才需要）golden-eval → deploy-gate
+# 使用：複製到你的 repo 的 .github/workflows/quality.yml，換掉 <> 佔位符。
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: ruff check .                 # ← 換成你的 linter
+      - run: python -m pytest -q          # ← 換成你的測試指令
+
+  golden-eval: # 專案有 LLM 輸出才需要這一關
+    needs: lint-test
+    runs-on: ubuntu-latest
+    env:
+      PROMPTFOO_DISABLE_TELEMETRY: "1"
+      PROMPTFOO_DISABLE_UPDATE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # pin 版本：eval 工具跟 prompt 一樣要版控
+      - run: npx -y promptfoo@<版本> eval -c <你的 promptfooconfig.yaml> --no-progress-bar
+
+  deploy-gate:
+    needs: [lint-test, golden-eval]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "接你的部署指令——前面紅燈時這一關不會執行，這就是 gate"

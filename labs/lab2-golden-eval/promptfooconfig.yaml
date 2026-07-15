@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# 珍奶點餐 bot — golden dataset 回歸測試（mock 回放、零 API key、可完全離線）
+description: boba-bot golden dataset（mock 回放）
+
+prompts:
+  - file://../../app/prompts/order_prompt.txt
+
+providers:
+  - id: file://mock_provider.js
+    label: mock-boba-llm
+
+# 每個 case 都要先過「輸出契約」：合法 JSON ＋ 符合 order.schema.json
+defaultTest:
+  assert:
+    - type: is-json
+      value: file://../../app/schemas/order.schema.json
+
+tests: file://tests.yaml

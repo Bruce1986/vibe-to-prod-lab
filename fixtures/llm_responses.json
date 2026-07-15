@@ -1,0 +1,110 @@
+{
+  "__comment__": {
+    "說明": "預錄 LLM 回應（教學用）。每個輸入有 good／sloppy 兩種變體：good＝理想輸出；sloppy＝刻意錯誤的教學樣本（幻覺配料、型別錯誤、枚舉外的值、壞 JSON），請勿修正。",
+    "選用規則": "FakeLLMClient 與 mock_provider.js 在 prompt 含「配料只能使用菜單」時回放 good，否則回放 sloppy——用來模擬 prompt 品質對輸出的影響。"
+  },
+  "我要一杯大杯珍珠奶茶，半糖少冰": {
+    "good": {
+      "status": "ok",
+      "items": [
+        { "name": "珍珠奶茶", "size": "L", "sweetness": 50, "ice": "少冰", "toppings": [], "quantity": 1 }
+      ]
+    },
+    "sloppy": {
+      "status": "ok",
+      "items": [
+        { "name": "珍珠奶茶", "size": "L", "sweetness": "半糖", "ice": "少冰", "toppings": [], "quantity": 1 }
+      ]
+    }
+  },
+  "兩杯中杯紅茶拿鐵，全糖正常冰，加波霸": {
+    "good": {
+      "status": "ok",
+      "items": [
+        { "name": "紅茶拿鐵", "size": "M", "sweetness": 100, "ice": "正常冰", "toppings": ["波霸"], "quantity": 2 }
+      ]
+    },
+    "sloppy": {
+      "status": "ok",
+      "items": [
+        { "name": "紅茶拿鐵", "size": "M", "sweetness": 100, "ice": "正常冰", "toppings": ["波霸"], "quantity": "兩" }
+      ]
+    }
+  },
+  "一杯熱的紅茶拿鐵，微冰": {
+    "good": {
+      "status": "ok",
+      "items": [
+        { "name": "紅茶拿鐵", "size": "M", "sweetness": 50, "ice": "熱", "toppings": [], "quantity": 1 }
+      ],
+      "notes": "「熱」與「微冰」衝突，以熱飲處理；如需冰飲請再告知。"
+    },
+    "sloppy": {
+      "status": "ok",
+      "items": [
+        { "name": "紅茶拿鐵", "size": "M", "sweetness": 50, "ice": "熱微冰", "toppings": [], "quantity": 1 }
+      ]
+    }
+  },
+  "一杯大杯珍珠奶茶全糖去冰，加跳跳糖": {
+    "good": {
+      "status": "ok",
+      "items": [
+        { "name": "珍珠奶茶", "size": "L", "sweetness": 100, "ice": "去冰", "toppings": [], "quantity": 1 }
+      ],
+      "notes": "跳跳糖不在配料菜單，已忽略。"
+    },
+    "sloppy": {
+      "status": "ok",
+      "items": [
+        { "name": "珍珠奶茶", "size": "L", "sweetness": 100, "ice": "去冰", "toppings": ["跳跳糖"], "quantity": 1 }
+      ]
+    }
+  },
+  "三杯冬瓜茶無糖去冰": {
+    "good": {
+      "status": "ok",
+      "items": [
+        { "name": "冬瓜茶", "size": "M", "sweetness": 0, "ice": "去冰", "toppings": [], "quantity": 3 }
+      ]
+    },
+    "sloppy": {
+      "status": "ok",
+      "items": [
+        { "name": "冬瓜茶", "size": "M", "sweetness": 0, "ice": "去冰", "toppings": [], "quantity": 3 }
+      ]
+    }
+  },
+  "來點好喝的": {
+    "good": {
+      "status": "need_clarification",
+      "question": "請問想喝哪一款呢？我們有珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶。"
+    },
+    "sloppy": {
+      "status": "ok",
+      "items": [
+        { "name": "四季春茶", "size": "M", "sweetness": 30, "ice": "微冰", "toppings": ["椰果"], "quantity": 1 }
+      ],
+      "notes": "幫你選了店長推薦。"
+    }
+  },
+  "一杯芋頭鮮奶微糖微冰": {
+    "good": {
+      "status": "ok",
+      "items": [
+        { "name": "芋頭鮮奶", "size": "M", "sweetness": 30, "ice": "微冰", "toppings": [], "quantity": 1 }
+      ]
+    },
+    "sloppy": "{\"status\": \"ok\", \"items\": [{\"name\": \"芋頭鮮奶\""
+  },
+  "__default__": {
+    "good": {
+      "status": "need_clarification",
+      "question": "不好意思，能再說一次您想點的品項、甜度與冰塊嗎？"
+    },
+    "sloppy": {
+      "status": "need_clarification",
+      "question": "不好意思，能再說一次您想點的品項、甜度與冰塊嗎？"
+    }
+  }
+}

@@ -1,0 +1,74 @@
+# 投影片管線：Marp Markdown → HTML → GitHub Pages
+# 這條 workflow 本身就是單元三「CI 建置＋部署」的示範。
+# 首次使用：repo Settings → Pages → Source 選「GitHub Actions」。
+name: slides
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "slides/**"
+      - ".github/workflows/slides.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Marp 建置投影片（HTML）
+        run: |
+          mkdir -p site
+          for f in slides/*.md; do
+            name=$(basename "$f" .md)
+            npx -y @marp-team/marp-cli@4 "$f" -o "site/${name}.html"
+          done
+      - name: 產生索引頁
+        run: |
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="zh-TW"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>vibe-to-prod-lab 投影片</title>
+          <style>
+            body{font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
+                 max-width:640px;margin:3rem auto;padding:0 1rem;line-height:1.7}
+            a{display:block;padding:.6rem 0;font-size:1.1rem}
+          </style></head><body>
+          <h1>從 Vibe Coding 到 Production Architecture<br>下午場投影片</h1>
+          <a href="01-testing-strategy.html">單元一｜AI 時代的測試策略</a>
+          <a href="02-llm-quality.html">單元二｜LLM／AI 系統品質驗證</a>
+          <a href="03-production-quality.html">單元三｜Production 品質工作流</a>
+          <p>教材 repo：<a href="https://github.com/Bruce1986/vibe-to-prod-lab">Bruce1986/vibe-to-prod-lab</a></p>
+          </body></html>
+          HTML
+      - name: 上傳打包（brucejhang.com 鏡像用）
+        uses: actions/upload-artifact@v4
+        with:
+          name: slides-html
+          path: site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

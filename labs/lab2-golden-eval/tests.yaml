@@ -1,0 +1,45 @@
+# Golden dataset：每筆＝一個顧客輸入＋這筆「金標準」該滿足的斷言。
+# 新增一個 case 的步驟：
+#   1. fixtures/llm_responses.json 加一筆預錄回應（good／sloppy 兩變體）
+#   2. 這裡加一個 test 區塊（vars.input 要與 fixtures 的 key 一字不差）
+- description: 基本訂單——甜度詞彙要映射成數值（半糖=50）
+  vars:
+    input: 我要一杯大杯珍珠奶茶，半糖少冰
+  assert:
+    - type: javascript
+      value: JSON.parse(output).items[0].sweetness === 50
+
+- description: 數量必須是數字（「兩杯」→ 2）
+  vars:
+    input: 兩杯中杯紅茶拿鐵，全糖正常冰，加波霸
+  assert:
+    - type: javascript
+      value: JSON.parse(output).items[0].quantity === 2
+
+- description: 衝突輸入（熱＋微冰）要收斂到合法枚舉
+  vars:
+    input: 一杯熱的紅茶拿鐵，微冰
+  assert:
+    - type: javascript
+      value: JSON.parse(output).items[0].ice === '熱'
+
+- description: 幻覺配料（跳跳糖）不得出現在訂單 toppings
+  vars:
+    input: 一杯大杯珍珠奶茶全糖去冰，加跳跳糖
+  assert:
+    - type: javascript
+      value: "!JSON.parse(output).items[0].toppings.includes('跳跳糖')"
+
+- description: 穩定 case——正常訂單不受 prompt 微調影響
+  vars:
+    input: 三杯冬瓜茶無糖去冰
+  assert:
+    - type: javascript
+      value: JSON.parse(output).items[0].quantity === 3
+
+- description: 模糊輸入必須反問，不能瞎猜
+  vars:
+    input: 來點好喝的
+  assert:
+    - type: javascript
+      value: JSON.parse(output).status === 'need_clarification'
