@@ -48,3 +48,8 @@
 - 加分關首測：`eval-live` 3/3 PASS——GitHub Models（gpt-4o-mini）通過契約、
   忽略幻覺誘餌、模糊輸入正確反問。課堂註記：這代表「紅色也是資訊」的
   橋段需要更難的誘餌或更弱的模型才會出現，課前一週調整。
+- 作者身分修正：首兩個 commit 誤用 global 的公司信箱（顯示為 homee-brucejhang），
+  已 filter-branch 改寫為 `8408455+Bruce1986@users.noreply.github.com` 並
+  force push（當時無其他 clone）；本 repo 與 website repo 均已設 local
+  user.name／user.email 防再犯。教訓：**憑證帳號≠commit 作者**，
+  多身分機器開新 repo 首 commit 前先查 `git config user.email`。
