@@ -9,7 +9,7 @@
 | promptfoo golden 軌 | ✅ | 本機實測：good 6/6 綠；劣化 prompt 1/6（exit 100） |
 | Skills ×5（兩工具通用） | ✅ | /course-help /lab1 /lab2 /lab3 /live-eval |
 | Workflows ×3 | ✅ | quality／eval-live／slides |
-| 投影片 ×3（Marp） | ✅ 初版 | 內容待 Bruce 迭代 |
+| 投影片 ×3（Marp） | ✅ v2 | 13／17／12 張；含講者備忘＋時間配額；待 Bruce 彩排微調 |
 | Template flag／Pages 設定 | ✅ | 2026-07-15 API 設定；Pages HTTP 200 |
 | eval-live 實測（GitHub Models） | ✅ 首測 | 3/3 PASS（gpt-4o-mini）；課前一週複測 |
 | 課前實測清單 | ⏳ | docs/teacher-setup.md |
@@ -37,6 +37,19 @@
   - mock 以「配料只能使用菜單」關鍵句判斷 prompt 品質——教學模擬器、機制透明。
   - templates/ 範本刻意不叫 AGENTS.md（避免被 Codex/Cursor 巢狀載入）。
   - 學員軌零 API key；真 LLM 只在 GitHub Actions（GitHub Models，models: read）。
+
+### 2026-07-15（投影片 v2 迭代）
+
+- 三份 deck 全面加深（13／17／12 張，本機 marp-cli 建置驗證通過）：
+  - 每頁加 **講者備忘**（HTML 註解＝Marp presenter notes）：時間配額、
+    要落地的重點、demo 切換動線、巡場注意事項。
+  - 塞入 repo 實檔片段：test_service 斷言、order.schema.json 枚舉、
+    tests.yaml golden case、quality.yml golden-eval job、log_demo 的 JSONL。
+  - 單元二 12→17 張（重頭戲）：新增「真實案例①AI reviewer 把現役 model
+    判幻覺」「初判 high 過半陣亡」兩頁去識別化第一手案例（無 repo 名／
+    無程式碼，Bruce 可否決）、「安全網收網流程圖」「最小起步法三步」。
+  - 統一 footer、字級調投影機友善（section 26px、code 0.72–0.85em）。
+- 版面爆版檢查列入課前彩排項（本機瀏覽器 pane 故障未逐頁截圖）。
 
 ### 2026-07-15（上線）
 
