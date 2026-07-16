@@ -9,6 +9,9 @@ prompts:
 
 providers:
   - id: ollama:chat:qwen2.5:1.5b
+    config:
+      temperature: 0
+      num_predict: 512
 
 defaultTest:
   assert:
