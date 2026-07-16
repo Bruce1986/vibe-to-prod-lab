@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# PoC：本地小模型評測（Ollama on CI runner）——零 API key、零帳號、零費用。
+# GitHub Models 退役（2026-07-30）後的候選替代；模型小、會考不過契約是預期，
+# 「紅色也是資訊」正是教學重點。
+description: boba-bot local eval（Ollama qwen2.5:1.5b、零 key）
+
+prompts:
+  - file://../../app/prompts/order_prompt.txt
+
+providers:
+  - id: ollama:chat:qwen2.5:1.5b
+
+defaultTest:
+  assert:
+    - type: is-json
+      value: file://../../app/schemas/order.schema.json
+
+tests: file://tests.live.yaml

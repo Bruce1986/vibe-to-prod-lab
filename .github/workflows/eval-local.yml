@@ -1,0 +1,43 @@
+# PoC：零 token、零帳號的真 LLM 評測——在 CI runner 上跑本地小模型（Ollama）
+# GitHub Models 2026-07-30 退役後的候選替代路線之一。
+# 觸發：push 到 poc/** 分支（實驗用，不進 main 常規管線）。
+name: eval-local
+
+on:
+  push:
+    branches: ["poc/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-eval:
+    runs-on: ubuntu-latest
+    env:
+      PROMPTFOO_DISABLE_TELEMETRY: "1"
+      PROMPTFOO_DISABLE_UPDATE: "1"
+      PROMPTFOO_DISABLE_SHARING: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安裝並啟動 Ollama＋拉取小模型
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          (pgrep -x ollama > /dev/null) || (nohup ollama serve > /tmp/ollama.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:11434 && break; sleep 2; done
+          time ollama pull qwen2.5:1.5b
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 本地模型評測（promptfoo × Ollama，零 API key）
+        working-directory: labs/lab2-golden-eval
+        run: |
+          EXIT=0
+          npx -y promptfoo@0.121.19 eval -c promptfooconfig.local.yaml --no-progress-bar || EXIT=$?
+          {
+            echo "### 🏠 eval-local 完成（qwen2.5:1.5b @ CI runner CPU）"
+            echo ""
+            echo "- 零 API key、零外部帳號、零費用——模型就跑在 runner 上"
+            echo "- 小模型考不過契約是預期內的資訊（紅色也是資訊）"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$EXIT"
