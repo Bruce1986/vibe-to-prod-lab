@@ -37,7 +37,7 @@ GitHub Actions → `quality` → `golden-eval` 轉紅。打開 log 讀 promptfoo
 
 > 機制透明化：本 lab 的 mock provider 以「配料只能使用菜單」這個關鍵句判斷
 > prompt 品質（`mock_provider.js`，教學模擬器）。真實世界的等效改寫當然有效，
-> 但在這個模擬器裡請保留關鍵句；想對**真**模型驗證，就去打加分關 `/live-eval`。
+> 但在這個模擬器裡請保留關鍵句；想對**真**模型驗證，就去打加分關 `/local-eval`。
 
 ## 4. 加一筆你自己的 golden case（5 分鐘）
 
@@ -47,8 +47,17 @@ GitHub Actions → `quality` → `golden-eval` 轉紅。打開 log 讀 promptfoo
 
 push 後 `golden-eval` 仍綠即驗收。
 
-## 加分關：`/live-eval`
+## 加分關：`/local-eval`
 
-用 GitHub Models **免 API key** 打真 LLM，看真模型過不過同一套契約。
-在 Claude Code 或 VS Code Copilot Chat 輸入 `/live-eval`，照指示操作。
-紅色不是壞事——那是「不可預測性被量測到」的證據。
+讓一個**真的 LLM** 考同一份 golden 卷——本地小模型（Ollama qwen2.5:1.5b）
+直接跑在 GitHub Actions 的 runner 上，**零 API key、零外部帳號、零費用**。
+在 Claude Code 或 VS Code Copilot Chat 輸入 `/local-eval`，照指示操作
+（或自己 `gh workflow run eval-local.yml`）。
+
+- 這是 **monitor** 不是 gate：紅色是資訊，不擋部署。
+- 對照組：雲端 gpt-4o-mini 曾以同卷拿 3/3；1.5B 小模型首測 1/3——
+  幻覺誘餌上當、模糊輸入瞎猜。同卷不同模型的分數差，就是 eval 的價值。
+- 想加碼：把 `promptfooconfig.local.yaml` 的模型換成 `qwen2.5:3b` 再跑一次。
+
+> 歷史註記：本關最初用 GitHub Models 免費推論（2026-07-30 已退役）。
+> golden set 與 provider 解耦，遷移只改一行——平台會死，eval 資產不會。

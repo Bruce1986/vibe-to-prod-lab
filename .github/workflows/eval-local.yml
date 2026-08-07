@@ -1,0 +1,47 @@
+# 加分關（/local-eval）：零 token、零帳號、零費用的真 LLM 評測——
+# 在 CI runner 上啟動本地小模型（Ollama qwen2.5:1.5b）考同一份 golden 卷。
+# 這是 monitor 不是 gate：紅色是資訊（小模型會上當幻覺誘餌、會瞎猜），
+# 不會擋任何部署。手動觸發（workflow_dispatch）。
+#
+# 歷史註記：本加分關原以 GitHub Models 免費推論實作（GITHUB_TOKEN＋
+# models: read），該服務於 2026-07-30 全面退役；改用本地模型後不再依賴
+# 任何外部平台——provider 抽象讓這次遷移只是換一行設定。
+name: eval-local
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-eval:
+    runs-on: ubuntu-latest
+    env:
+      PROMPTFOO_DISABLE_TELEMETRY: "1"
+      PROMPTFOO_DISABLE_UPDATE: "1"
+      PROMPTFOO_DISABLE_SHARING: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安裝並啟動 Ollama＋拉取小模型
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          (pgrep -x ollama > /dev/null) || (nohup ollama serve > /tmp/ollama.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:11434 && break; sleep 2; done
+          time ollama pull qwen2.5:1.5b
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 本地模型評測（promptfoo × Ollama，零 API key）
+        working-directory: labs/lab2-golden-eval
+        run: |
+          EXIT=0
+          npx -y promptfoo@0.121.19 eval -c promptfooconfig.local.yaml --no-progress-bar || EXIT=$?
+          {
+            echo "### 🏠 eval-local 完成（qwen2.5:1.5b @ CI runner CPU）"
+            echo ""
+            echo "- 零 API key、零外部帳號、零費用——模型就跑在 runner 上"
+            echo "- 這是 **monitor** 不是 gate：紅色是資訊，不擋部署"
+            echo "- 對照組：雲端 gpt-4o-mini 曾以同一份考卷拿 3/3（2026-07-15 實測）"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$EXIT"

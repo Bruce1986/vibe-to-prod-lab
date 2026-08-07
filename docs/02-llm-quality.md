@@ -53,9 +53,16 @@ prompt 也是 code：改 prompt → 跑 golden set → 看 diff → 紅了不上
 2. 成本隨 golden set 線性成長——先用規則層濾掉能濾的。
 3. CI 裡的 judge 回應要 cache 或預錄，否則紅綠會抖動。
 
-## 免 key 打真模型：GitHub Models
+## 零 token 考真模型：把小模型跑在 CI runner 上
 
-repo 內建加分關（`/live-eval`）：GitHub Actions 的 `GITHUB_TOKEN` 加上
-`models: read` 權限即可呼叫 GitHub Models，零註冊零信用卡。
-免費層 rate limit 低，只適合小樣本示範。
-<https://docs.github.com/en/github-models/quickstart>
+repo 內建加分關（`/local-eval`）：eval-local workflow 在 GitHub Actions 的
+runner 上安裝 Ollama、拉 qwen2.5:1.5b、對同一份 golden 卷推論——
+**零 API key、零外部帳號、零費用**，全程約 3 分鐘。它是 monitor 不是
+gate：小模型上當幻覺誘餌、對模糊輸入瞎猜都是預期內的「資訊」。
+
+> 存續風險的活教材：本關最初以 **GitHub Models**（`GITHUB_TOKEN`＋
+> `models: read` 的免費推論）實作，2026-07-15 實測 gpt-4o-mini 3/3；
+> 該服務 **2026-07-30 全面退役**（7/1 公告），與 OpenAI Evals（11/30 關閉）
+> 同一個夏天謝幕。因 golden set 與 provider 解耦，遷移只改一行 provider——
+> 平台會死，eval 資產不會。
+> <https://github.blog/changelog/2026-07-01-github-models-is-being-fully-retired-on-july-30-2026/>
