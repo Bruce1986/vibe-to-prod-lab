@@ -42,12 +42,13 @@ docs/       <文件>
 
 ## 程式碼撰寫原則（Style）
 
-<放你團隊 style guide 的連結，或列出這個專案最在意的幾條撰寫原則
-（例：函式長度上限、錯誤處理慣例、命名規則）。>
+<貼上本課程 `templates/coding-review-principles.md` 的「程式碼撰寫原則」十條，
+或放你團隊 style guide 的連結。>
 
 ## Code Review 原則（Review）
 
-<貼上本課程 `templates/pr-checklist.md` 的內容或連結。
+<貼上本課程 `templates/coding-review-principles.md` 的「Code Review 原則」八條
+（逐項可勾的 PR 版本見 `templates/pr-checklist.md`）。
 重點：AI 生成的 code 用更嚴的標準審。>
 
 ## 語言（Language）
