@@ -24,8 +24,8 @@ tests/          pytest：單元／整合／契約／golden（lab1 與 lab2 備�
 labs/           三個 lab 的學員導引（每個資料夾都有自己的 README 與 AGENTS.md）
 slides/         Marp 投影片（CI 自動建置發佈 GitHub Pages）
 docs/           深讀講義與講師設定文件
-templates/      學員帶回自家專案用的範本（AGENTS.sample.md、pr-checklist、
-                coding-review-principles、CI 範本）
+templates/      學員帶回自家專案用的範本（AGENTS.sample.md、pr-checklist.md、
+                coding-review-principles.md、CI 範本）
 .claude/skills/ 自訂指令：/course-help /lab1 /lab2 /lab3 /live-eval
                 （Claude Code 與 VS Code Copilot 都會讀取這個目錄）
 ```

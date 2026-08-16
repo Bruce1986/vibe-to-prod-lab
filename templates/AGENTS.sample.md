@@ -4,6 +4,8 @@
 使用方式（Usage）：
 1. 複製本檔到你的 repo 根目錄，改名為 AGENTS.md。
 2. 逐節把 <> 佔位符換成你專案的實況；用不到的節直接刪掉。
+   （佔位符跨行沒關係：HTML 標籤必須以 ASCII 字母開頭，`<` 後接中文
+    會被 CommonMark 當一般文字轉義顯示，不會被當成標籤而隱藏。）
 3. Claude Code 使用者另建一個 CLAUDE.md，內容只要一行：@AGENTS.md
    （VS Code Copilot 會直接讀 root 的 AGENTS.md，不用額外設定；
     Windows 環境不要用 symlink——會被 git checkout 成純文字檔而靜默失效。）
