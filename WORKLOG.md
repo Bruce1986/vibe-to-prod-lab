@@ -7,8 +7,8 @@
 | App＋四層測試（pytest 26 綠） | ✅ | Python 3.9 相容驗證過 |
 | Lab 1／2／3 導引 | ✅ | 各含 README＋AGENTS.md＋CLAUDE.md |
 | promptfoo golden 軌 | ✅ | 本機實測：good 6/6 綠；劣化 prompt 1/6（exit 100） |
-| Skills ×5（兩工具通用） | ✅ | /course-help /lab1 /lab2 /lab3 /live-eval |
-| Workflows ×3 | ✅ | quality／eval-live／slides |
+| Skills ×5（兩工具通用） | ✅ | /course-help /lab1 /lab2 /lab3 /local-eval |
+| Workflows ×3 | ✅ | quality／eval-local／slides |
 | 投影片 ×3（Marp） | ✅ v2+ | 13／18／12 張；含講者備忘＋時間配額；案例①②已入 deck 2；待 Bruce 彩排微調 |
 | 案例集 docs/case-studies.md | ✅ 定稿 | 六案（07-16 owner 核准；「錯的 base」案依 owner 決策移除）；對照表對齊官方課綱 |
 | Template flag／Pages 設定 | ✅ | 2026-07-15 API 設定；Pages HTTP 200 |

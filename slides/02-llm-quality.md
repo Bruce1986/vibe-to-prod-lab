@@ -239,7 +239,7 @@ pip install lettucedetect        # MIT、17M–210M 參數、CPU 即時
 
 <!-- 1.5 分。數據來源在深讀講義（arXiv 連結）。讓大家記住區間就好：「一到五成」。 -->
 
-## LLM-as-judge 的三個誠實提醒＋同一個夏天的兩則訃聞
+## LLM-as-judge 的三個誠實提醒＋同一年的兩則訃聞
 
 1. **Judge 也會錯**——它自己就是 LLM（想想案例①），判準要抽樣複核
 2. **成本**——每筆檢查都是推論，golden set 大了要算錢
@@ -247,12 +247,13 @@ pip install lettucedetect        # MIT、17M–210M 參數、CPU 即時
 
 兩則訃聞：**OpenAI Evals 平台 2026-11-30 關閉**；
 **GitHub Models 2026-07-30 全面退役**——本課加分關原本用它，
-備課期間親歷 7/1 公告 → 7/16 brownout → 換引擎只改**一行 provider**
+備課期間親歷 7/1 公告 → 換引擎：**斷言與 prompt 一字未改**，
+出力的是 provider 設定＋生成參數＋模型佈建
 
 → eval 工具選型要看**存續風險**；golden set 要**工具中立**
-（同一批 golden 餵 promptfoo＋pytest 雙軌、provider 一行可換——保險就是這樣買的）
+（同一批 golden 餵 promptfoo＋pytest 雙軌——保險就是這樣買的）
 
-<!-- 2.5 分。第二則訃聞是親身故事：加分關差 19 天帶著死平台上課，靠 provider 抽象一行遷移到本地 Ollama。資產是 golden data，不是任何平台的設定檔。 -->
+<!-- 2.5 分。第二則訃聞是親身故事：加分關差 19 天帶著死平台上課，遷移到本地 Ollama。誠實講代價：golden 斷言與 prompt 零改動，但 provider 設定要重寫、要補 num_predict（不補就被截斷 JSON）、還要在 CI 裝 Ollama 拉模型。資產是 golden data，不是任何平台的設定檔。 -->
 
 ## 帶回團隊的最小起步法（三步、一個下午）
 

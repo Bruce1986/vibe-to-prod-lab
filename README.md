@@ -64,10 +64,11 @@ python -m pytest -q   # 全綠 = 起點正確
 **Q：為什麼不用真的 LLM？**
 課堂主軌用預錄回放，所以零 key、零費用、結果可重現——這正是「把 LLM
 隔離在介面後面」的測試設計。想考真模型：`/local-eval` 會在 GitHub Actions
-的 runner 上啟動本地小模型（Ollama）考同一份卷——一樣零 API key、零帳號、
-零費用。（本 repo 的加分關最初用 GitHub Models 免費推論實作，該服務已於
-2026-07-30 退役；因為 golden set 與 provider 解耦，遷移只改了一行——
-這段歷史本身就是單元二的教材。）
+的 runner 上啟動本地小模型（Ollama），考同一份 golden 題庫裡的 3 題小樣卷
+（主線 golden 軌是 6 題）——一樣零 API key、零帳號、零費用。（本 repo 的
+加分關最初用 GitHub Models 免費推論實作，該服務已於 2026-07-30 退役；因為
+golden set 與 provider 解耦，斷言與 prompt 原封不動搬過來，改的是 provider
+設定與模型佈建——這段歷史本身就是單元二的教材。）
 
 **Q：mock 怎麼知道我的 prompt 變好變壞？**
 教學模擬器：`mock_provider.js` 與 `FakeLLMClient` 以 prompt 是否包含

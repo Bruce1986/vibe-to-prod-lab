@@ -56,13 +56,17 @@ prompt 也是 code：改 prompt → 跑 golden set → 看 diff → 紅了不上
 ## 零 token 考真模型：把小模型跑在 CI runner 上
 
 repo 內建加分關（`/local-eval`）：eval-local workflow 在 GitHub Actions 的
-runner 上安裝 Ollama、拉 qwen2.5:1.5b、對同一份 golden 卷推論——
+runner 上安裝 Ollama、拉 qwen2.5:1.5b，對同一份 golden 題庫裡的 3 題小樣卷
+（`tests.small.yaml`；主線 golden 軌 `tests.yaml` 是 6 題）推論——
 **零 API key、零外部帳號、零費用**，全程約 3 分鐘。它是 monitor 不是
 gate：小模型上當幻覺誘餌、對模糊輸入瞎猜都是預期內的「資訊」。
 
 > 存續風險的活教材：本關最初以 **GitHub Models**（`GITHUB_TOKEN`＋
 > `models: read` 的免費推論）實作，2026-07-15 實測 gpt-4o-mini 3/3；
 > 該服務 **2026-07-30 全面退役**（7/1 公告），與 OpenAI Evals（11/30 關閉）
-> 同一個夏天謝幕。因 golden set 與 provider 解耦，遷移只改一行 provider——
-> 平台會死，eval 資產不會。
+> 同一年謝幕。因 golden set 與 provider 解耦，斷言與 prompt 一個字都沒改；
+> 但誠實地說，遷移不只「改一行」——provider 換掉後還得補生成參數
+> （`num_predict: 512`，否則 Ollama 預設輸出上限會把 JSON 攔腰截斷，這是
+> 實際踩到才發現的），以及整套「模型從哪來」的 runtime 佈建（安裝 Ollama、
+> 拉模型）。**平台會死，eval 資產不會——但搬家還是要出力。**
 > <https://github.blog/changelog/2026-07-01-github-models-is-being-fully-retired-on-july-30-2026/>

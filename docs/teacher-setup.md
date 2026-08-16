@@ -20,7 +20,7 @@
 ## 課前一週實測清單（8/11 前）
 
 - [ ] 最新版 VS Code＋Copilot：clone 後零設定體驗
-      （AGENTS.md 生效？`/lab1`～`/live-eval` skills 出現在 `/` 選單？）
+      （AGENTS.md 生效？`/lab1`～`/local-eval` skills 出現在 `/` 選單？）
 - [ ] Claude Code：`@AGENTS.md` 橋接與 skills 觸發
 - [ ] Windows 實機：venv＋pytest；Phoenix `pip install arize-phoenix` ＋
       `phoenix serve`（含 6006 port 防火牆）
@@ -46,7 +46,7 @@
 ## 已知設計決策（勿在課前翻案）
 
 - mock provider 以關鍵句「配料只能使用菜單」判斷 prompt 品質——教學模擬器，
-  機制對學員透明公開；真模型驗證走 `/live-eval`。
+  機制對學員透明公開；真模型驗證走 `/local-eval`。
 - 學員軌全部零 API key；真 LLM 環節＝eval-local（Ollama 在 runner 上，
   零 token；monitor 不是 gate，紅色屬預期）。GitHub Models 退役史保留在
   投影片訃聞頁與各檔歷史註記，是刻意的教材，勿清掉。

@@ -49,15 +49,22 @@ push 後 `golden-eval` 仍綠即驗收。
 
 ## 加分關：`/local-eval`
 
-讓一個**真的 LLM** 考同一份 golden 卷——本地小模型（Ollama qwen2.5:1.5b）
-直接跑在 GitHub Actions 的 runner 上，**零 API key、零外部帳號、零費用**。
-在 Claude Code 或 VS Code Copilot Chat 輸入 `/local-eval`，照指示操作
-（或自己 `gh workflow run eval-local.yml`）。
+讓一個**真的 LLM** 考 golden 題庫裡的 3 題小樣卷——本地小模型
+（Ollama qwen2.5:1.5b）直接跑在 GitHub Actions 的 runner 上，
+**零 API key、零外部帳號、零費用**。在 Claude Code 或 VS Code Copilot Chat
+輸入 `/local-eval`，照指示操作（或自己 `gh workflow run eval-local.yml`）。
 
 - 這是 **monitor** 不是 gate：紅色是資訊，不擋部署。
-- 對照組：雲端 gpt-4o-mini 曾以同卷拿 3/3；1.5B 小模型首測 1/3——
+- **考卷範圍**：加分關讀的是 `tests.small.yaml`（3 題，主線 `tests.yaml`
+  6 題的子集），因為 CPU 推論慢、題數要壓。**所以上面第 4 步你自己加的
+  那筆 case 不會出現在加分關**——它跑在主線 `golden-eval` 上。想讓小模型
+  也考你那題，把它一併加進 `tests.small.yaml`。
+- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3；1.5B 小模型首測 1/3——
   幻覺誘餌上當、模糊輸入瞎猜。同卷不同模型的分數差，就是 eval 的價值。
-- 想加碼：把 `promptfooconfig.local.yaml` 的模型換成 `qwen2.5:3b` 再跑一次。
+- 想加碼：把 `promptfooconfig.local.yaml` 的模型換成 `qwen2.5:3b` 再跑一次
+  （workflow 會照 config 裡寫的模型名去 pull，改一個地方就好；3b 比較慢，
+  CPU 推論多等幾分鐘是正常的）。
 
 > 歷史註記：本關最初用 GitHub Models 免費推論（2026-07-30 已退役）。
-> golden set 與 provider 解耦，遷移只改一行——平台會死，eval 資產不會。
+> golden set 與 provider 解耦，斷言與 prompt 一字未改；改的是 provider
+> 設定與模型佈建——平台會死，eval 資產不會。
