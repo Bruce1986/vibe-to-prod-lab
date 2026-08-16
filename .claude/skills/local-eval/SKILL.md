@@ -13,7 +13,7 @@ GitHub Actions 的 runner 上）考同一份 golden 卷——零 API key、零�
 1. 前置確認：學員的 repo 已 push 到 GitHub（用 template 建立的自己的 repo）。
 2. 觸發（擇一）：
    - 有 `gh` CLI：`gh workflow run eval-local.yml`，然後
-     `gh run list --workflow=eval-local -L 1` 拿 run id，再 `gh run watch <id>`。
+     `gh run list --workflow=eval-local.yml -L 1` 拿 run id，再 `gh run watch <id>`。
    - 沒有 `gh`：瀏覽器 → repo → Actions → `eval-local` → 「Run workflow」。
 3. 等約 3 分鐘（裝 Ollama＋拉模型＋CPU 推論）。
 4. 解讀結果（重點）：
