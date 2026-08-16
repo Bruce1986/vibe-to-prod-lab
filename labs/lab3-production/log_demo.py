@@ -14,8 +14,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))  # 讓本腳本可直接執行，不必透過 pytest
 
-from app.llm_client import FakeLLMClient  # noqa: E402
-from app.service import load_prompt, parse_order  # noqa: E402
+from app.llm_client import FakeLLMClient
+from app.service import load_prompt, parse_order
 
 INPUTS = [
     "我要一杯大杯珍珠奶茶，半糖少冰",

@@ -1,3 +1,6 @@
 pytest>=8.0
 jsonschema>=4.21
-ruff>=0.5
+# ruff 鎖在 0.16.x：E402 的判定在 0.16 前後不同。0.15.12 會對 log_demo.py 第 17–18 行
+# （sys.path 調整後的 import）報 E402，0.16.3 不報。本檔移除那兩處 noqa 後，只有 0.16.x
+# 能通過 `ruff check app tests labs`；不鎖版就會依安裝當下解析到的版本紅或綠。
+ruff>=0.16.3,<0.17
