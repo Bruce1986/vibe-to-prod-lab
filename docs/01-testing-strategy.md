@@ -33,6 +33,8 @@ AI 協作的**前提設施**。
 
 ## 延伸閱讀
 
+- 《Software Engineering at Google》正體中文版：
+  <https://software-engineering-at-google.gh.miniasp.com/#/>
 - 測試金字塔與測試配比、Code Review 文化：
   <https://brucejhang.com/tw/topics/knowledge/google-software-engineering-deep-dive-article.html>
 - 可測試性與解耦（SOLID、DI）：
