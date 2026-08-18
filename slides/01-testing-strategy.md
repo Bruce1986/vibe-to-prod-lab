@@ -17,8 +17,27 @@ style: |
 講師：Bruce ｜ 2026-08-18（二）｜ 臺大計中 206
 
 教材 repo：`github.com/Bruce1986/vibe-to-prod-lab`
+![w:150](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASgAAAEoAQAAAADDfFG0AAABeklEQVR42u2ayw7CMAwELf7/n43UxvY6D0CIG1MkKtKcRvZmvcX8k8vYxa5vd9l9XfdYtfbEH/bJ9Q+7LMAOQn6Bu4nVE3g1Xld1VVkFs3oCrx0va8zuD7yOvFK9StHg9UK/LKRLlQv9WnlVNc0fzscNL9c2lHKTJ/BSXipX169wF+kq4DX3Y5mIKLRYoh8XXsPLB6LyrtGW8Jrq68aSpNKOjY6FV68vH7IlNRUjJXq/78ehX4JqHJXo13o+xqEokpXui35c56FQLNeikowCXpP/KrkSdll28Jrn7fqSFfzXUe/V6qfs51EAr96PrnGO+Aj0fj9vZwadQubNucJryb/U0ddwRP515FXq5TUeRZvCq/NKlVcRkxV4TX5CSk0m7RyM4NX03nukaurued+xy3OiIVt27/TjUe9dLX5mrnGH16xfyStjfJd+hdeOV2aHkYI572vf8coIOiWf+jrpl4kTs3rnAa/9+SjTtlemw/x48l/8c5BdP9/1BNTcLQbOIovrAAAAAElFTkSuQmCC)
 
-<!-- 13:30 開講，本段 25 分。開場前確認大家已完成 Use this template + clone（開場 10 分鐘做過）。這一頁停留 30 秒：報 repo 名，請還沒 clone 的人現在按 Use this template。 -->
+<!-- 13:30 開講，本段 25 分。開場前確認大家已完成 Use this template + clone（開場 10 分鐘做過）。這一頁停留 30 秒：報 repo 名，請還沒 clone 的人現在掃 QR 或直接打網址，按 Use this template。 -->
+
+## 講師介紹｜布魯斯張 Bruce Jhang
+
+- **HTC／Google** 工作經驗，做過自動化工程師與軟體工程師
+- 離開 Google 後歷經 **IC 大廠旗下的軟體子公司 → 軟體新創 → AI 新創**
+- 現在是**研究者・講師・工程師**：把交通、加密、健康、軟體工程做成可以親手操作的工具，
+  再寫成看得懂的文章 — **10+ 件已上線、30+ 件開發中、80+ 件還在構想**
+- **今天講的就是我每天在跑的東西**：50+ 個自有 repo 全上 AI review gate，
+  PR 要測試綠、CI 綠、review 收斂才進 main
+
+> 用工程師的方法，做能被一般人使用的工具。
+
+`brucejhang.com`
+![w:130](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOgAAADoAQAAAADN0pXVAAAA2UlEQVR42u2ZwQ6DMAxDrf3/PwehJna3Sdx5UIRampObOHGK6mrotd7fqjXOxXqz89HVuKNVcyA6oarxzlFA8aqh9pd36HgH9DPwesLjdeIaT7P524vtQednl6b/ysWuR115uw6rwPlqhMmWpbF4k6e2DL0OgcpfRXpmKbB/a9hbX/FN5q81lmRHU/E6gBdaZ2lwPWoHV9Ci49lC2u7F6o20/vG3yPpqJ3KmJ/RHSk0i62erq3JzBOavfhr9JrX49xsTzS5OcP5OX2gOw+83yn0hul94/z5wrQekgjxq+mc6RgAAAABJRU5ErkJggg==)
+
+<!-- 90 秒，不要講成履歷。前兩點快速帶過（一句話：待過大公司也待過會倒的小公司），
+重點是後兩點：我不是來講理論的，下午所有機制我每天在自己的 repo 上跑，
+單元二會直接拿真實案例出來講。掃 QR 是給課後想找資料的人，現場不用停等。 -->
 
 ## 下午場地圖
 
