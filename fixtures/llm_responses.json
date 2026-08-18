@@ -97,6 +97,20 @@
     },
     "sloppy": "{\"status\": \"ok\", \"items\": [{\"name\": \"芋頭鮮奶\""
   },
+  "一杯四季春茶少糖正常冰": {
+    "good": {
+      "status": "ok",
+      "items": [
+        { "name": "四季春茶", "size": "M", "sweetness": 70, "ice": "正常冰", "toppings": [], "quantity": 1 }
+      ]
+    },
+    "sloppy": {
+      "status": "ok",
+      "items": [
+        { "name": "四季春茶", "size": "中", "sweetness": 70, "ice": "正常冰", "toppings": [], "quantity": 1 }
+      ]
+    }
+  },
   "__default__": {
     "good": {
       "status": "need_clarification",

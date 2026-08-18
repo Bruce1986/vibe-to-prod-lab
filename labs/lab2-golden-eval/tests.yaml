@@ -43,3 +43,10 @@
   assert:
     - type: javascript
       value: JSON.parse(output).status === 'need_clarification'
+
+- description: 顧客未指定容量時要套預設值 M（不是留白、也不是自創「中」）
+  vars:
+    input: 一杯四季春茶少糖正常冰
+  assert:
+    - type: javascript
+      value: JSON.parse(output).items[0].size === 'M'
