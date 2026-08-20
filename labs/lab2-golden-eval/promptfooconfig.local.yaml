@@ -13,10 +13,12 @@ providers:
     config:
       temperature: 0
       num_predict: 512
-      # 刻意不強制 JSON 輸出（Ollama 的 format 欄位需放 config.passthrough
-      # 才會生效；config 直下會被當成 options 而靜默無效）：本 lab 要觀測
-      # 小模型原始輸出的格式失誤——is-json 契約掛掉正是「紅色也是資訊」
-      # 的教學素材，強制 format 反而遮掉要展示的失敗模式。
+      # 刻意不強制 JSON 輸出：本 lab 要觀測小模型原始輸出的格式失誤——
+      # is-json 契約掛掉正是「紅色也是資訊」的教學素材，強制 format
+      # 反而遮掉要展示的失敗模式。
+      # （另有一說是 Ollama 的 format 欄位得放在 config.passthrough 底下才生效、
+      #  放 config 直下會被當成 options 而靜默無效——本 repo **未實測驗證**，
+      #  真要改成強制 JSON 輸出前請自己先跑一次確認，別當成已知事實。）
 
 defaultTest:
   assert:

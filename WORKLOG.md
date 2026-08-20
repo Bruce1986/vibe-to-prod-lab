@@ -39,26 +39,6 @@
   - templates/ 範本刻意不叫 AGENTS.md（避免被 Codex/Cursor 巢狀載入）。
   - 學員軌零 API key；真 LLM 只在 GitHub Actions（GitHub Models，models: read）。
 
-### 2026-07-16（加分關換引擎：GitHub Models 退役應變）
-
-- **背景**：GitHub Models 官方公告 2026-07-30 全面退役（7/1 changelog、
-  7/16 與 7/23 brownout、含既有客戶）——原加分關 eval-live 會在開課前
-  19 天死亡。owner 拍板改走本地模型路線。
-- **PoC**（分支 `poc/ollama-eval`，已驗證後併回主線）：Ollama qwen2.5:1.5b
-  跑在 ubuntu runner 上、promptfoo ollama provider；第一輪 3 題全掛＝
-  Ollama 預設輸出上限截斷 JSON（教訓：eval 基礎設施要先驗自己），加
-  `num_predict: 512`＋`temperature: 0` 後：**1/3 通過、全程約 3 分鐘、
-  零 token 零帳號零費用**；失敗的兩題＝幻覺誘餌上當、模糊輸入瞎猜——
-  與雲端 gpt-4o-mini 的 3/3 形成同卷對照，「紅色也是資訊」內建。
-- **主線重構**：eval-live.yml／promptfooconfig.live.yaml 移除；新增
-  eval-local.yml＋promptfooconfig.local.yaml＋tests.small.yaml（原
-  tests.live.yaml 改名重註解）；skill `/live-eval` → `/local-eval`；
-  README／AGENTS.md／CLAUDE.md／lab2 README＋AGENTS／deck 2（案例①加映、
-  訃聞頁擴為雙訃聞、Lab 2 卡）／teacher-setup 全數同步。
-- **設計定位**：eval-local 是 **monitor 不是 gate**——紅色是資訊、不擋
-  部署，與案例 6（known-failing monitor）同構；GitHub Models 退役史
-  保留為教材（provider 抽象讓遷移只改一行）。
-
 ### 2026-07-15（投影片 v2 迭代）
 
 - 三份 deck 全面加深（13／17／12 張，本機 marp-cli 建置驗證通過）：
@@ -87,3 +67,25 @@
   force push（當時無其他 clone）；本 repo 與 website repo 均已設 local
   user.name／user.email 防再犯。教訓：**憑證帳號≠commit 作者**，
   多身分機器開新 repo 首 commit 前先查 `git config user.email`。
+
+### 2026-07-16（加分關換引擎：GitHub Models 退役應變）
+
+- **背景**：GitHub Models 官方公告 2026-07-30 全面退役（7/1 changelog、
+  7/16 與 7/23 brownout、含既有客戶）——原加分關 eval-live 會在開課前
+  19 天死亡。owner 拍板改走本地模型路線。
+- **PoC**（分支 `poc/ollama-eval`，已驗證後併回主線）：Ollama qwen2.5:1.5b
+  跑在 ubuntu runner 上、promptfoo ollama provider；第一輪 3 題全掛＝
+  Ollama 預設輸出上限截斷 JSON（教訓：eval 基礎設施要先驗自己），加
+  `num_predict: 512`＋`temperature: 0` 後：**1/3 通過、全程約 3 分鐘、
+  零 token 零帳號零費用**；失敗的兩題＝幻覺誘餌上當、模糊輸入瞎猜——
+  與雲端 gpt-4o-mini 的 3/3 形成同卷對照，「紅色也是資訊」內建。
+- **主線重構**：eval-live.yml／promptfooconfig.live.yaml 移除；新增
+  eval-local.yml＋promptfooconfig.local.yaml＋tests.small.yaml（原
+  tests.live.yaml 改名重註解）；skill `/live-eval` → `/local-eval`；
+  README／AGENTS.md／CLAUDE.md／lab2 README＋AGENTS／deck 2（案例①加映、
+  訃聞頁擴為雙訃聞、Lab 2 卡）／teacher-setup 全數同步。
+- **設計定位**：eval-local 是 **monitor 不是 gate**——紅色是資訊、不擋
+  部署，與案例 6（known-failing monitor）同構；GitHub Models 退役史
+  保留為教材（provider 抽象讓 golden 題目與 prompt 免改；實際出力的是
+  provider 設定、生成參數、模型佈建與斷言寫法加固——不是「只改一行」，
+  這點在 docs/02-llm-quality.md 已誠實寫明，兩處說法須一致）。

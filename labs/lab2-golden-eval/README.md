@@ -66,5 +66,6 @@ push 後 `golden-eval` 仍綠即驗收。
   CPU 推論多等幾分鐘是正常的）。
 
 > 歷史註記：本關最初用 GitHub Models 免費推論（2026-07-30 已退役）。
-> golden set 與 provider 解耦，斷言與 prompt 一字未改；改的是 provider
-> 設定與模型佈建——平台會死，eval 資產不會。
+> golden set 與 provider 解耦，題目與 prompt 一字未改，斷言要驗的東西也一樣
+> （寫法則改成 try/catch＋防禦性存取，好讓小模型的殘缺輸出判 Fail 而不是
+> 拋 Error）；改的是 provider 設定與模型佈建——平台會死，eval 資產不會。

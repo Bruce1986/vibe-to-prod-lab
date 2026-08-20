@@ -64,8 +64,10 @@ gate：小模型上當幻覺誘餌、對模糊輸入瞎猜都是預期內的「�
 > 存續風險的活教材：本關最初以 **GitHub Models**（`GITHUB_TOKEN`＋
 > `models: read` 的免費推論）實作，2026-07-15 實測 gpt-4o-mini 3/3；
 > 該服務 **2026-07-30 全面退役**（7/1 公告），與 OpenAI Evals（11/30 關閉）
-> 同一年謝幕。因 golden set 與 provider 解耦，斷言與 prompt 一個字都沒改；
-> 但誠實地說，遷移不只「改一行」——provider 換掉後還得補生成參數
+> 同一年謝幕。因 golden set 與 provider 解耦，題目與 prompt 一個字都沒改，
+> 斷言要驗的東西也一樣；但誠實地說，遷移不只「改一行」——斷言的**寫法**
+> 得改成 try/catch＋防禦性存取（小模型會夾帶 ```json 圍欄、會輸出殘缺結構，
+> 原本的單行直接存取會拋 Error 而不是判 Fail），provider 換掉後還得補生成參數
 > （`num_predict: 512`，否則 Ollama 預設輸出上限會把 JSON 攔腰截斷，這是
 > 實際踩到才發現的），以及整套「模型從哪來」的 runtime 佈建（安裝 Ollama、
 > 拉模型）。**平台會死，eval 資產不會——但搬家還是要出力。**

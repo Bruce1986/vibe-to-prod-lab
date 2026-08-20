@@ -67,7 +67,8 @@ python -m pytest -q   # 全綠 = 起點正確
 的 runner 上啟動本地小模型（Ollama），考同一份 golden 題庫裡的 3 題小樣卷
 （主線 golden 軌是 6 題）——一樣零 API key、零帳號、零費用。（本 repo 的
 加分關最初用 GitHub Models 免費推論實作，該服務已於 2026-07-30 退役；因為
-golden set 與 provider 解耦，斷言與 prompt 原封不動搬過來，改的是 provider
+golden set 與 provider 解耦，題目與 prompt 原封不動搬過來、斷言要驗的東西
+也一字未改（只是寫法改成防禦性，好吃下小模型的格式雜訊），改的是 provider
 設定與模型佈建——這段歷史本身就是單元二的教材。）
 
 **Q：mock 怎麼知道我的 prompt 變好變壞？**

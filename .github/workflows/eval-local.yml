@@ -6,8 +6,9 @@
 #
 # 歷史註記：本加分關原以 GitHub Models 免費推論實作（GITHUB_TOKEN＋
 # models: read），該服務於 2026-07-30 全面退役；改用本地模型後不再依賴
-# 任何外部推論 API 或帳號——golden 斷言與 prompt 原封不動搬過來，換掉的
-# 是 provider 設定與「模型從哪來」的整套 runtime 佈建（見下方安裝步驟）。
+# 任何外部推論 API 或帳號——golden 題目與 prompt 原封不動搬過來、斷言要驗的
+# 東西也沒變（寫法改成防禦性以吃下小模型的殘缺輸出），換掉的是 provider
+# 設定與「模型從哪來」的整套 runtime 佈建（見下方安裝步驟）。
 #
 # 步驟刻意拆細（安裝／拉模型／裝 promptfoo／評測）：這樣哪一關紅了，
 # 一眼就知道是基礎設施壞掉還是模型答錯——兩者的意義完全不同。
@@ -22,7 +23,10 @@ permissions:
 jobs:
   local-eval:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 必須大於所有步驟 timeout 的總和（5＋8＋5＋10＝28）再加 checkout／setup-node
+    # 的餘裕：job 層 timeout 一旦先觸發，整個 job 會被砍掉，下面精心分層的
+    # ::error:: 訊息與 step summary 都不會執行——那正好毀掉「哪一關紅了一眼看出」。
+    timeout-minutes: 35
     env:
       PROMPTFOO_DISABLE_TELEMETRY: "1"
       PROMPTFOO_DISABLE_UPDATE: "1"
@@ -32,7 +36,14 @@ jobs:
       - name: 安裝並啟動 Ollama（基礎設施）
         timeout-minutes: 5
         run: |
-          curl -fsSL https://ollama.com/install.sh | sh
+          # 先落地再執行，不用 curl | sh：這樣執行的內容有機會被檢視，而且
+          # 下面的 sha256 會把「這次實際跑了哪一份腳本」留成稽核痕跡。
+          # 注意：這只是留痕，不是版本鎖定——上游改版時雜湊就會變，
+          # 真要鎖版本得改抓特定 release 並比對已知雜湊（待決策）。
+          curl -fsSL https://ollama.com/install.sh -o /tmp/ollama-install.sh
+          echo "install.sh sha256：$(sha256sum /tmp/ollama-install.sh | cut -d' ' -f1)"
+          sh /tmp/ollama-install.sh
+          echo "已安裝的 Ollama 版本：$(ollama --version 2>&1 | head -1)"
           (pgrep -x ollama > /dev/null) || (nohup ollama serve > /tmp/ollama.log 2>&1 &)
           # 等服務就緒；等不到就明確失敗並附上 log，不要讓下一步丟出無頭緒的連線錯誤
           for i in $(seq 1 30); do
@@ -58,6 +69,9 @@ jobs:
           fi
           echo "config 指定的模型：$MODEL"
           time ollama pull "$MODEL"
+          # 傳給後面的步驟：run block 內的 shell 變數不會跨步驟存活，
+          # 摘要要報出「實際考的是哪顆模型」就得走 GITHUB_ENV。
+          echo "MODEL=$MODEL" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -65,27 +79,42 @@ jobs:
         timeout-minutes: 5
         run: npx -y promptfoo@0.121.19 --version
       - name: 本地模型評測（promptfoo × Ollama，零 API key）
+        timeout-minutes: 10
         working-directory: labs/lab2-golden-eval
         run: |
           EXIT=0
-          npx -y promptfoo@0.121.19 eval -c promptfooconfig.local.yaml --no-progress-bar || EXIT=$?
-          # 評測非零有兩種意義完全不同的原因，摘要不能混為一談：
-          # 模型答錯＝預期內的教學訊號；Ollama 半路死掉＝基礎設施故障。
-          if curl -sf http://localhost:11434/api/tags > /dev/null; then
-            {
-              echo "### 🏠 eval-local 完成（qwen2.5:1.5b @ CI runner CPU）"
-              echo ""
-              echo "- 零 API key、零外部帳號、零費用——模型就跑在 runner 上"
-              echo "- 這是 **monitor** 不是 gate：紅色是資訊，不擋部署"
-              echo "- 考的是 golden 題庫的 3 題小樣卷（主線 golden 軌為 6 題）"
-              echo "- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3（2026-07-15 實測）"
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
+          npx -y promptfoo@0.121.19 eval -c promptfooconfig.local.yaml \
+            --no-progress-bar -o output.json || EXIT=$?
+          # 評測非零有三種意義完全不同的原因，摘要不能混為一談：
+          #   1. Ollama 半路死掉        → 基礎設施故障
+          #   2. promptfoo 沒產出結果檔 → 執行期／設定錯誤（config、provider 打錯）
+          #   3. 以上皆非              → 模型答錯，預期內的教學訊號
+          # 只探測 daemon 存活不足以區分 2 與 3：config 打錯時 daemon 照樣活得好好的，
+          # 卻會被報成「模型答錯」，把設定 bug 誤導成教學素材。
+          if ! curl -sf http://localhost:11434/api/tags > /dev/null; then
             {
               echo "### ⚠️ eval-local 未完成——基礎設施故障，不是模型品質訊號"
               echo ""
               echo "評測結束時 Ollama 已無回應（服務中途死亡或被 OOM 殺掉）。"
               echo "這一次的紅**不能**當成「小模型答錯」來解讀，請重跑。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ ! -s output.json ] \
+            || ! node -e 'JSON.parse(require("fs").readFileSync("output.json","utf8"))' 2>/dev/null; then
+            {
+              echo "### ⚠️ eval-local 未完成——執行期錯誤，不是模型品質訊號"
+              echo ""
+              echo "promptfoo 沒有產出可解析的結果檔（output.json），代表評測"
+              echo "根本沒跑完——多半是 config／provider 設定錯誤，而不是小模型答錯。"
+              echo "請看上方 promptfoo 的錯誤輸出，**不要**把這次的紅當成模型品質訊號。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### 🏠 eval-local 完成（${MODEL:-未知模型} @ CI runner CPU）"
+              echo ""
+              echo "- 零 API key、零外部帳號、零費用——模型就跑在 runner 上"
+              echo "- 這是 **monitor** 不是 gate：紅色是資訊，不擋部署"
+              echo "- 考的是 golden 題庫的 3 題小樣卷（主線 golden 軌為 6 題）"
+              echo "- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3（2026-07-15 實測）"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$EXIT"
