@@ -147,17 +147,19 @@ phoenix serve        # → http://localhost:6006
 
 <!-- 2 分。closed loop 是本課系統觀的收束點：監控發現 → golden 固化 → CI 防再犯。 -->
 
-## 帶回團隊的三件禮物（templates/）
+## 帶回團隊的四件禮物（templates/）
 
 1. **`AGENTS.sample.md`**——把今天的規範寫給你團隊的 AI 看
    （規範不落地成檔案，AI 就每次都用預設值；複製到 repo root 改名即生效）
-2. **`pr-checklist.md`**——AI 時代的 PR 品質清單（作者版＋reviewer 版）
-3. **`workflows/quality.sample.yml`**——三關品質管線，換佔位符就能用
+2. **`coding-review-principles.md`**——撰寫十條＋Review 八條，
+   也就是 AGENTS.md 的 Style／Review 兩節要貼上的原文
+3. **`pr-checklist.md`**——AI 時代的 PR 品質清單（作者版＋reviewer 版）
+4. **`workflows/quality.sample.yml`**——三關品質管線，換佔位符就能用
 
 外加：這整個 repo 是 **Template**——「Use this template」複製走，
 改成你們家的題材，golden set 換成你們家的事故
 
-<!-- 1.5 分。具體交代「回去第一步」：三個檔案各 30 秒導覽。 -->
+<!-- 1.5 分。具體交代「回去第一步」：四個檔案各 20 秒導覽。 -->
 
 ## Lab 3（15 分鐘）＋ 收尾
 
