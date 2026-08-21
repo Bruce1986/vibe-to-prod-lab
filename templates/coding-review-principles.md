@@ -4,6 +4,10 @@
 貼進你專案的 `AGENTS.md`（範本見 [AGENTS.sample.md](AGENTS.sample.md) 的 Style／Review 兩節），
 AI 每次生成才會遵守——規範不落地成檔案，AI 就每次都用預設值。
 
+> 來源：備課文件 `docs/2026-08-18-ntu-course-prep.md` 第 5、6 節（在 website repo，
+> 不在本 repo 版控範圍），逐字移植。本檔是可攜副本，**修改請與來源文件同步**；
+> 本 repo 的 CI 不檢查兩者是否一致。
+
 ## 程式碼撰寫原則（人與 AI 都適用）
 
 1. **先寫驗收條件再寫 code**：測試就是規格——與上午 Spec-Driven Workflow 直接銜接
@@ -28,4 +32,6 @@ AI 每次生成才會遵守——規範不落地成檔案，AI 就每次都用�
 7. **對事不對人，給理由不給命令**：「建議改成 X，因為 Y」而不是「改掉」
 8. **兩個問題收尾**：這段 code 壞掉時我們會怎麼知道（可觀測性）？下一個要改它的人需要知道什麼（可維護性）？
 
-> 逐項可勾的 PR 版本見 [pr-checklist.md](pr-checklist.md)。
+> 可勾選的 PR 版本見 [pr-checklist.md](pr-checklist.md)。那份是依「提交前（作者）／
+> Review 時（reviewer）」重新分組的精簡版，**與這裡的八條不是一對一對應**
+> （例如第 1、2 條落在作者區塊，第 7 條沒有對應的勾選項）。

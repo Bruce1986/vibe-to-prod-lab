@@ -3,6 +3,10 @@
 課程「從 Vibe Coding 到 Production Architecture」下午場的帶回禮：
 貼進你的 PR template，或直接給 AI 當自我檢查清單。
 
+> 這是 [coding-review-principles.md](coding-review-principles.md) 那八條 Review 原則
+> 依「作者／reviewer」重新分組的精簡版，**不是逐項一對一**。兩份會各自漂移而 CI 不會
+> 察覺，改動任一份時請一併確認另一份。
+
 ## 提交前（作者——不論人或 AI）
 
 - [ ] CI 全綠（lint、format、test、型別檢查）——機器能抓的不要留給人

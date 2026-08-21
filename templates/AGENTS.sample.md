@@ -53,7 +53,7 @@ docs/       <文件>
 ## Code Review 原則（Review）
 
 <貼上本課程 `templates/coding-review-principles.md` 的「Code Review 原則」八條
-（逐項可勾的 PR 版本見 `templates/pr-checklist.md`）。
+（可勾選的精簡版見 `templates/pr-checklist.md`，兩者不是一對一對應）。
 重點：AI 生成的 code 用更嚴的標準審。>
 
 ## 語言（Language）

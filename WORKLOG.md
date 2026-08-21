@@ -67,3 +67,21 @@
   force push（當時無其他 clone）；本 repo 與 website repo 均已設 local
   user.name／user.email 防再犯。教訓：**憑證帳號≠commit 作者**，
   多身分機器開新 repo 首 commit 前先查 `git config user.email`。
+
+### 2026-08-21（templates/ 補課堂講義十條＋八條）
+
+- `templates/AGENTS.sample.md` 的 Style／Review 兩節原本寫「貼上課程講義的十條／
+  八條原則」，但 repo 裡沒有這份講義——引用是懸空的。改法：把原則移植成
+  `templates/coding-review-principles.md`（來源為 website repo 的備課文件
+  `docs/2026-08-18-ntu-course-prep.md` 第 5、6 節，owner 已定稿），兩節改指實檔。
+- 同步四處引用：根 `AGENTS.md` 結構地圖、`README.md` 的 repo 地圖與「搬回團隊」
+  FAQ、`slides/03-production-quality.md` 的「帶回團隊的三件禮物」→ 四件。
+  （前一版只改了 AGENTS.md，README 與投影片還停在三項，學生照著帶回會漏掉新檔。）
+- `AGENTS.sample.md` 的 Usage 步驟 1 補一句：`templates/…` 這些相對路徑離開本 repo
+  就不存在，要一併複製或先把內容貼進來。
+- 已知未解（留給 owner 裁決，非本 PR 範圍）：
+  - 十八條原則目前有三份人工同步的副本（備課文件、`coding-review-principles.md`、
+    `pr-checklist.md` 的衍生版），CI 沒有任何機制防漂移。已在兩份 templates 互相
+    標註「改動請同步」，但沒有自動守門。
+  - `quality.yml` 只跑 `ruff check`，`slides.yml` 只跑 marp 建置；全 CI 沒有
+    markdown lint 或連結檢查，文件斷鏈不會被擋下。
