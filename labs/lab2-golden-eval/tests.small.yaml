@@ -13,7 +13,16 @@
 # 的中文說明黏成一串，JSON.parse 直接拋例外→判 Fail。那是抽取器的失誤，
 # 卻會被算進「小模型答錯」的分數裡，讓 1/3 這種數字比真實情況更難看。
 # 改成掃出所有頂層 {...} 候選、取「最後一個 parse 得動的」＝模型的正式答案。
-# （promptfoo 每條 assert 各自獨立求值，無法共用函式，故三處重複這段掃描。）
+#
+# 掃描器的兩個細節（都被 tests/test_local_eval_asserts.py 實際驗證過）：
+#   1. 只有進入某個候選物件（depth > 0）之後才追蹤字串狀態。否則物件「之前」
+#      的散文裡若有一個未配對的半形引號，狀態會被扳成「字串內」，後面真正的
+#      JSON 花括號全被當成字串內容跳過，整個物件抽不到——又變成抽取器的失誤
+#      被算成模型答錯。
+#   2. 每掃完一個候選物件就把字串狀態歸零，不讓它污染下一個候選。
+# 三處重複這段掃描：promptfoo 的每條 assert 各自求值，本 repo 未查證
+# `type: javascript` 的 value 是否支援 file:// 指到共用檔（provider 欄位是
+# 支援的），要精簡請自行實測後再改，別當成已知限制。
 - description: 基本訂單（真模型版）
   vars:
     input: 我要一杯大杯珍珠奶茶，半糖少冰
@@ -23,10 +32,11 @@
         const cands = []; let depth = 0, start = -1, inStr = false, esc = false;
         for (let i = 0; i < output.length; i++) {
           const c = output[i];
+          if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }
           if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
           if (c === '"') { inStr = true; continue; }
-          if (c === '{') { if (depth++ === 0) start = i; }
-          else if (c === '}' && depth > 0 && --depth === 0) cands.push(output.slice(start, i + 1));
+          if (c === '{') { depth++; }
+          else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }
         }
         let obj = null;
         for (let i = cands.length - 1; i >= 0 && obj === null; i--) {
@@ -43,10 +53,11 @@
         const cands = []; let depth = 0, start = -1, inStr = false, esc = false;
         for (let i = 0; i < output.length; i++) {
           const c = output[i];
+          if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }
           if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
           if (c === '"') { inStr = true; continue; }
-          if (c === '{') { if (depth++ === 0) start = i; }
-          else if (c === '}' && depth > 0 && --depth === 0) cands.push(output.slice(start, i + 1));
+          if (c === '{') { depth++; }
+          else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }
         }
         let obj = null;
         for (let i = cands.length - 1; i >= 0 && obj === null; i--) {
@@ -67,10 +78,11 @@
         const cands = []; let depth = 0, start = -1, inStr = false, esc = false;
         for (let i = 0; i < output.length; i++) {
           const c = output[i];
+          if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }
           if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
           if (c === '"') { inStr = true; continue; }
-          if (c === '{') { if (depth++ === 0) start = i; }
-          else if (c === '}' && depth > 0 && --depth === 0) cands.push(output.slice(start, i + 1));
+          if (c === '{') { depth++; }
+          else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }
         }
         let obj = null;
         for (let i = cands.length - 1; i >= 0 && obj === null; i--) {
