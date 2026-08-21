@@ -83,5 +83,12 @@
   - 十八條原則目前有三份人工同步的副本（備課文件、`coding-review-principles.md`、
     `pr-checklist.md` 的衍生版），CI 沒有任何機制防漂移。已在兩份 templates 互相
     標註「改動請同步」，但沒有自動守門。
-  - `quality.yml` 只跑 `ruff check`，`slides.yml` 只跑 marp 建置；全 CI 沒有
-    markdown lint 或連結檢查，文件斷鏈不會被擋下。
+  - `quality.yml` 的三關（`ruff check app tests labs`、`pytest`、promptfoo
+    golden-eval）與 `slides.yml`（marp 建置＋Pages 部署）都只涵蓋 Python 與 prompt；
+    全 CI 沒有 markdown lint 或連結檢查，文件斷鏈不會被擋下。
+- 第 4 輪（Opus tracer）修掉前幾輪自己寫錯的三句話：`pr-checklist.md` 與
+  `coding-review-principles.md` 都把前者說成「那八條的精簡版」，但它其實有 14 項
+  （八條重新分組＋撰寫十條的第 1、9 條＋兩項課程特有檢查），比八條**多**不是精簡；
+  「兩份 templates 互相標註要同步」當時只做了單向（只有 pr-checklist 那一邊），
+  已補齊反方向；WORKLOG 原寫「`quality.yml` 只跑 ruff check」也不實——它還跑
+  pytest 與 golden-eval，正是本課程投影片拿來當「三關品質管線」教材的那份。
