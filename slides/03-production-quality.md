@@ -159,7 +159,7 @@ phoenix serve        # → http://localhost:6006
 外加：這整個 repo 是 **Template**——「Use this template」複製走，
 改成你們家的題材，golden set 換成你們家的事故
 
-<!-- 1.5 分。具體交代「回去第一步」：四個檔案各 20 秒導覽。 -->
+<!-- 1.5 分。具體交代「回去第一步」：四個檔案各 20 秒導覽，末段 Template 說明 10 秒。 -->
 
 ## Lab 3（15 分鐘）＋ 收尾
 

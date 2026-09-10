@@ -1,7 +1,8 @@
 # 課堂講義：撰寫十條＋Review 八條
 
 課程「從 Vibe Coding 到 Production Architecture」下午場的帶回禮：
-貼進你專案的 `AGENTS.md`（範本見 [AGENTS.sample.md](AGENTS.sample.md) 的 Style／Review 兩節），
+貼進你專案的 `AGENTS.md`（範本見本課程 repo 的 `templates/AGENTS.sample.md` 的
+Style／Review 兩節——那份複製走時要改名成 AGENTS.md，所以這裡不寫成相對連結），
 AI 每次生成才會遵守——規範不落地成檔案，AI 就每次都用預設值。
 
 > 來源：備課文件 `docs/2026-08-18-ntu-course-prep.md` 第 5、6 節（在 website repo，

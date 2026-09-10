@@ -92,3 +92,20 @@
   「兩份 templates 互相標註要同步」當時只做了單向（只有 pr-checklist 那一邊），
   已補齊反方向；WORKLOG 原寫「`quality.yml` 只跑 ruff check」也不實——它還跑
   pytest 與 golden-eval，正是本課程投影片拿來當「三關品質管線」教材的那份。
+- 第 5 輪（學員實作／逐條事實查證／資訊架構三個視角）三條，都是本次改動自己帶進來的：
+  - 「精簡版」的說法上一輪只在 `coding-review-principles.md` 與 `pr-checklist.md`
+    改掉，`AGENTS.sample.md` 那句是同一次改動新加的、仍寫「可勾選的精簡版」，於是
+    三份 templates 對同一件事各自表述。已一併改成「可勾選版……共 14 項比這八條多」。
+  - `coding-review-principles.md` 開頭指向 `AGENTS.sample.md` 的相對連結，在讀者照
+    `AGENTS.sample.md` 自己的步驟 1「複製到 repo 根目錄改名為 AGENTS.md」之後就指不到
+    檔案——正是本 PR 要修的那類懸空引用，反向重製了一份。已改成不可點的路徑說明。
+    （另兩條 `pr-checklist.md` ↔ `coding-review-principles.md` 的互指不受影響：那兩檔
+    是整批複製、不改名。）
+  - 投影片講者備忘的秒數對不上：件數從三改四時，「三個檔案各 30 秒」（＝90 秒，剛好
+    是同一行標的 1.5 分）改成「四個檔案各 20 秒」只剩 80 秒。已補上末段 Template
+    說明的 10 秒，讓算式回到 1.5 分。
+  本輪查證屬實、勿重審：撰寫十條與 Review 八條對備課文件 §5/§6 逐行比對仍 100% 逐字
+  相符（比對程式做過反向突變，改一個詞即轉紅）；`pr-checklist.md` 實數 8＋6＝14 項；
+  `templates/` 四個檔案與 README／AGENTS.md／投影片三處清單一致；`labs/*/AGENTS.md`、
+  `.claude/skills/*/SKILL.md`、`.github/copilot-instructions.md` 本來就不列舉 templates
+  內容，不需跟著改。
