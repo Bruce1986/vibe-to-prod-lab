@@ -3,11 +3,13 @@
 課程「從 Vibe Coding 到 Production Architecture」下午場的帶回禮：
 貼進你的 PR template，或直接給 AI 當自我檢查清單。
 
-> 這是 [coding-review-principles.md](coding-review-principles.md) 的可勾選版，**不是
-> 逐項一對一**：八條 Review 原則依「作者／reviewer」重新分組，再補進撰寫十條裡與 PR
-> 直接相關的兩條（第 1 條先寫驗收條件、第 9 條 commit 講為什麼），以及本課程特有的
-> 兩項（LLM 輸出契約、golden set 回歸）——所以這裡共 14 項，比那八條多。
-> 兩份會各自漂移而 CI 不會察覺，改動任一份時請一併確認另一份。
+> 這是 `templates/coding-review-principles.md` 的可勾選版，**不是逐項一對一**。
+> 14 項的組成：8 項出自 Review 八條（第 5 條拆成「幻覺 API」與「更嚴標準」兩項；
+> 第 7 條「對事不對人」是 review 態度，沒有可勾選的對應項）、4 項出自撰寫十條第 1、
+> 4、9 條（第 4 條在作者與 reviewer 兩區各一項）、2 項是本課程特有（LLM 輸出契約、
+> golden set 回歸）。兩份會各自漂移而 CI 不會察覺，改動任一份時請一併確認另一份。
+> 上面刻意不寫成相對連結——本檔常被整段貼進 `.github/pull_request_template.md`，
+> 一搬位置相對路徑就斷。
 
 ## 提交前（作者——不論人或 AI）
 

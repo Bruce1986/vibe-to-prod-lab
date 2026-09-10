@@ -4,8 +4,9 @@
 使用方式（Usage）：
 1. 複製本檔到你的 repo 根目錄，改名為 AGENTS.md。
    （Style／Review 兩節要貼的原文在本課程 repo 的
-    templates/coding-review-principles.md 與 templates/pr-checklist.md；
-    這兩個相對路徑離開本 repo 就不存在，請一併複製走或先把內容貼進來。）
+    templates/coding-review-principles.md；Review 節另外提到的
+    templates/pr-checklist.md 是衍生的可勾選版，不是要貼進這兩節的內容。
+    這些路徑離開本 repo 就不存在，請一併複製走或先把內容貼進來。）
 2. 逐節把 <> 佔位符換成你專案的實況；用不到的節直接刪掉。
    （佔位符跨行沒關係：HTML 標籤必須以 ASCII 字母開頭，`<` 後接中文
     會被 CommonMark 當一般文字轉義顯示，不會被當成標籤而隱藏。）
@@ -52,7 +53,7 @@ docs/       <文件>
 
 ## Code Review 原則（Review）
 
-<貼上本課程 `templates/coding-review-principles.md` 的「Code Review 原則」八條
+<貼上本課程 `templates/coding-review-principles.md` 的「簡易 Code Review 原則」八條
 （可勾選版見 `templates/pr-checklist.md`：那份依作者／reviewer 重新分組並補了
 課程特有檢查，共 14 項比這八條多，兩者不是一對一對應）。
 重點：AI 生成的 code 用更嚴的標準審。>

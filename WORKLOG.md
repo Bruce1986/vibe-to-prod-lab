@@ -83,12 +83,13 @@
   - 十八條原則目前有三份人工同步的副本（備課文件、`coding-review-principles.md`、
     `pr-checklist.md` 的衍生版），CI 沒有任何機制防漂移。已在兩份 templates 互相
     標註「改動請同步」，但沒有自動守門。
-  - `quality.yml` 的三關（`ruff check app tests labs`、`pytest`、promptfoo
-    golden-eval）與 `slides.yml`（marp 建置＋Pages 部署）都只涵蓋 Python 與 prompt；
-    全 CI 沒有 markdown lint 或連結檢查，文件斷鏈不會被擋下。
+  - `quality.yml` 的三關是三個 job：`lint-test`（ruff 與 pytest 同一關）、
+    `golden-eval`、`deploy-gate`；`slides.yml` 只把 markdown 交給 marp 建成 HTML
+    再部署 Pages，不檢查內容對不對。全 CI 沒有 markdown lint 或連結檢查，
+    文件斷鏈不會被擋下。
 - 第 4 輪（Opus tracer）修掉前幾輪自己寫錯的三句話：`pr-checklist.md` 與
-  `coding-review-principles.md` 都把前者說成「那八條的精簡版」，但它其實有 14 項
-  （八條重新分組＋撰寫十條的第 1、9 條＋兩項課程特有檢查），比八條**多**不是精簡；
+  `coding-review-principles.md` 都把前者說成「那八條的精簡版」，但它其實有 14 項，
+  比八條**多**不是精簡（當時順手寫的組成拆解加不起來，第 7 輪已重算）；
   「兩份 templates 互相標註要同步」當時只做了單向（只有 pr-checklist 那一邊），
   已補齊反方向；WORKLOG 原寫「`quality.yml` 只跑 ruff check」也不實——它還跑
   pytest 與 golden-eval，正是本課程投影片拿來當「三關品質管線」教材的那份。
@@ -109,3 +110,30 @@
   `templates/` 四個檔案與 README／AGENTS.md／投影片三處清單一致；`labs/*/AGENTS.md`、
   `.claude/skills/*/SKILL.md`、`.github/copilot-instructions.md` 本來就不列舉 templates
   內容，不需跟著改。
+- 第 6／7 輪（教學時間表／語言用詞／範圍與紀錄誠實性三個視角，另加一次 Codex 獨立審）
+  五條全修：
+  - 上面那條「`quality.yml` 三關」在第 4 輪被改寫時**改錯了**：三關是三個 job
+    （`lint-test`／`golden-eval`／`deploy-gate`），不是 ruff／pytest／golden-eval
+    三項——把 lint-test 拆成兩關又漏掉 deploy-gate，正好與同一個 PR 改的投影片
+    第 38–44 行自相矛盾；順帶「slides.yml 只涵蓋 Python 與 prompt」也不對，它處理的
+    是 markdown。兩處已改。（獨立的 reviewer 與 Codex 各自抓到同一條。）
+  - 「14 項」的組成拆解一直加不起來：原寫「八條重新分組＋撰寫十條第 1、9 條＋兩項
+    課程特有」＝12，卻宣稱 14；`coding-review-principles.md` 那份還同時寫「第 7 條
+    沒有對應項」，實際只剩 11。逐項比對後重寫成加得起來的版本：Review 八條攤成 8 項
+    （第 5 條拆成「幻覺 API」與「更嚴標準」，第 7 條無對應項）＋撰寫十條第 1、4、9 條
+    共 4 項（第 4 條在作者與 reviewer 兩區各一項）＋課程特有 2 項＝14。已寫程式核對
+    「宣稱組成合計＝實際 checkbox 數」，並反向突變確認任一數字寫錯就會轉紅。
+  - `templates/` 三份檔案之間不再使用相對連結，一律寫成 repo 根目錄起算的路徑：
+    `pr-checklist.md` 的用法就是整段貼進 `.github/pull_request_template.md`，一搬
+    位置相對連結就斷。第 5 輪只修了指向 `AGENTS.sample.md` 的那一條，當時判定另兩條
+    互指「不受影響」是錯的。
+  - `AGENTS.sample.md` 的 Usage 把 `pr-checklist.md` 也說成 Style／Review 兩節「要貼
+    的原文」，但本文只叫人貼 `coding-review-principles.md`，checklist 是衍生版；已
+    改寫。同節引用的章節名補上「簡易」二字，與來源標題一致。
+  - `coding-review-principles.md` 的「修改請與來源文件同步」對複製走的人不可能履行
+    （來源檔在講師的另一個 repo）。已限定為「給教材維護者」，並明講複製走的人不受
+    此約束。
+  留給 owner（本輪查到、但不宜由審查逕自決定）：`slides/03-production-quality.md`
+  逐頁講者備忘加總 19 分，該單元標的 22 分（line 20「15:16 開講」到 line 177
+  「15:38 實作」），差 3 分沒有落在任何一頁。此落差在本 PR 之前就存在（本 PR 未增減
+  頁數、也未改動其他頁的分鐘數），要補在開場還是攤進各頁是教學安排，留給講者決定。
