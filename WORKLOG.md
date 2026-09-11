@@ -147,3 +147,28 @@
   重現方式。已附上 `tests/fixtures/eval_local/fake_ollama.py`（產生那份
   provider-error 原檔用的假 Ollama）與 README 裡可複製貼上的完整步驟，
   並把絕對路徑換成佔位字串（README 寫明只動了這一處與檔名）。
+- **同輪 Opus tracer 專審本日三顆 commit，抓到 6 條自造缺陷（全修）**：
+  ⑦ **「部分題目沒作答」時把沒答到的算進分母**——3 題裡 2 題沒輸出、1 題
+  答對會印成「本次成績 1/3」並與 gpt-4o-mini 的 3/3 並排，正是本日要修的
+  那種誤讀，只是縮小成部分題目。改成分母只算真的拿到輸出的題目
+  （「1/1（另有 2 筆沒拿到模型輸出，不計分）」）。
+  ⑧ **把本次題數內插進固定的歷史事實**：「曾以這 ${total} 題拿 3/3」
+  「${total} 題的樣本小到單題翻面就是 33 個百分點」——3/3 與 33 都是寫死的，
+  只有分母會動，題數一變就印出捏造的量測。且 promptfoo 的**列數＝題數 ×
+  provider 數**（實測：同一份 tests.small.yaml 配兩個 provider ⇒ 6 列、
+  testIdx 為 [0,0,1,1,2,2]）。歷史對照句全部寫死，題數改由 testIdx 去重算，
+  題數不是 3 時直接說「沒有可比的對照組」。
+  ⑨ 檔頭實測記錄裡「整份檔案裡沒有任何 error 欄位」**是錯的**：三筆都有
+  `error`，內容是斷言訊息，跟模型真的答錯時長得一樣——那才是「找 error 列」
+  分不出來的真正理由。已改正，並補測試把新說法釘住。
+  ⑩ 「全部沒作答」那段無條件說「promptfoo 把每一筆記成斷言失敗」，但
+  errors>0（打不到服務）時記的是 ERROR，同段自相矛盾；措辭改成依 errors 分岔。
+  ⑪ `test_ci_toolchain.py` 只檢查執行當下 PATH 有沒有 node，**把 quality.yml
+  的 setup-node 整段拿掉照樣全綠**——它宣稱要防的回歸它抓不到。改成直接讀
+  quality.yml 斷言 lint-test 有 setup-node，且各軌 node 版本一致。
+  ⑫ fixture README 的重現步驟產不出庫裡那份 `output_answered.json`
+  （description／providers 對不上）。已照文件步驟**重新產生**該 fixture，
+  並實測「照 README 跑出來的 `config` 區塊與庫裡兩份逐字相同」。
+- 本輪突變六個（分母含沒作答／題數內插回對照句／不分 errors 同一句話／
+  題數用列數不去重／拿掉 setup-node／兩軌 node 版本不一致）全部致紅；
+  pytest 78 綠 1 skip、ruff 乾淨。

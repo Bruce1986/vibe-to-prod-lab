@@ -7,13 +7,15 @@
 //
 // 「只探測 daemon 存活」不足以區分「執行期錯誤」與「模型答錯」，這件事原本就
 // 寫在 workflow 的註解裡；但原本的第二道防線（output.json 存在且能 parse）
-// 一樣擋不住。**實測（2026-09-11、promptfoo 0.121.19，用一個對 /api/tags 回
-// 200、對 /api/chat 回 404 "model not found" 的假 Ollama）**：
+// 一樣擋不住。**實測（2026-09-11、promptfoo 0.121.19，用 tests/fixtures/
+// eval_local/fake_ollama.py 起一個對 /api/tags 回 200、對 /api/chat 回 404
+// "model not found" 的假 Ollama）**：
 //   - promptfoo 正常跑完（exit 100）並寫出完全合法的 output.json；
 //   - 三筆結果的 `response.output` 全是空字串；
-//   - `stats.errors` 是 **0**，`failureReason` 是 ASSERT（斷言判 false），
-//     整份檔案裡沒有任何 error 欄位。
-// 也就是說「找 error／failureReason=ERROR 的列」這種直覺修法也是假守門。
+//   - `stats.errors` 是 **0**，`failureReason` 是 ASSERT；
+//   - 三筆都**有** `error` 欄位，但內容是斷言訊息（"Custom function returned
+//     false…"）——跟模型真的答錯時長得一模一樣。
+// 所以「檔案能 parse」擋不住，「找有 error 欄位的列」也分不出來（兩種狀態都有）。
 // 分得出來的訊號只有一個：**沒有任何一筆拿到非空的模型輸出**。
 //
 // 用法：node summarize_eval.js [output.json]；markdown 印到 stdout。
@@ -25,6 +27,11 @@ const fs = require('fs');
 
 const OUTPUT_PATH = process.argv[2] || 'output.json';
 const MODEL = process.env.MODEL || '未知模型';
+
+// 歷史對照是固定事實，**一律寫死、不要內插本次的數字**：3/3 是 2026-07-15 用
+// 3 題考 gpt-4o-mini 的實測，33 個百分點是 1/3 的算術。把本次題數代進這幾句，
+// 題數一變就會印出捏造的歷史量測與錯誤的算術。
+const BASELINE_QUESTIONS = 3;
 
 /** 讀 output.json，回傳 {kind:'unreadable', detail} 或 {kind:'ok', rows, stats}。 */
 function readResults(path) {
@@ -71,6 +78,16 @@ function answered(row) {
   return output !== undefined && output !== null;
 }
 
+/** promptfoo 的一列＝一題 ×一個 provider，所以列數不等於題數。 */
+function countDistinct(rows, pick) {
+  const seen = new Set();
+  rows.forEach((row, index) => {
+    const key = pick(row);
+    seen.add(key === undefined || key === null ? `#${index}` : String(key));
+  });
+  return seen.size;
+}
+
 function summarize(path) {
   const parsed = readResults(path);
   const lines = [];
@@ -88,37 +105,61 @@ function summarize(path) {
   }
 
   const { rows, stats } = parsed;
-  const total = rows.length;
-  const answeredCount = rows.filter(answered).length;
+  const answeredRows = rows.filter(answered);
   const errorCount = Number.isFinite(Number(stats.errors)) ? Number(stats.errors) : 0;
+  const questions = countDistinct(rows, (row) => row.testIdx);
+  const providers = countDistinct(rows, (row) => {
+    const provider = row.provider;
+    if (!provider || typeof provider !== 'object') return provider;
+    return provider.label || provider.id;
+  });
 
-  if (answeredCount === 0) {
+  if (answeredRows.length === 0) {
     lines.push('### ⚠️ eval-local 未完成——執行期錯誤，不是模型品質訊號');
     lines.push('');
-    lines.push(`${total} 題**全部沒有拿到模型輸出**（promptfoo 記錄的 errors＝${errorCount}）。`);
-    lines.push('Ollama 的服務還活著，但模型沒有真的作答——多半是模型沒拉到、載入');
-    lines.push('失敗（OOM）或請求被拒。這種情況下 promptfoo 仍會寫出合法的結果檔、');
-    lines.push('把每一題記成斷言失敗，看起來就像「小模型全答錯」。');
+    lines.push(`${rows.length} 筆結果**全部沒有拿到模型輸出**（promptfoo 記錄的 errors＝${errorCount}）。`);
+    if (errorCount > 0) {
+      lines.push('promptfoo 把它們記成 ERROR——多半是打不到服務（連線被拒、中途死亡）。');
+    } else {
+      lines.push('promptfoo 沒有記成 ERROR，而是把每一筆記成斷言失敗，看起來就像');
+      lines.push('「小模型全答錯」——模型沒拉到、載入失敗（OOM）或請求被拒都長這樣。');
+    }
     lines.push('');
     lines.push('**不要**把這次的紅當成小模型的品質訊號，請重跑。');
     return lines.join('\n');
   }
 
-  const passed = rows.filter((row) => row.success === true).length;
+  const scored = answeredRows.length;
+  const passed = answeredRows.filter((row) => row.success === true).length;
+  const unanswered = rows.length - scored;
+
   lines.push(`### 🏠 eval-local 完成（${MODEL} @ CI runner CPU）`);
   lines.push('');
-  lines.push(`- **本次成績：${passed}/${total}**`);
+  if (unanswered > 0) {
+    // 沒作答的不能計進分母：那正是本檔要防的誤讀，只是縮小到部分題目。
+    lines.push(`- **本次成績：${passed}/${scored}**（另有 ${unanswered} 筆沒拿到模型輸出，不計分）`);
+  } else {
+    lines.push(`- **本次成績：${passed}/${scored}**`);
+  }
   lines.push('- 零 API key、零外部帳號、零費用——模型就跑在 runner 上');
   lines.push('- 這是 **monitor** 不是 gate：紅色是資訊，不擋部署');
-  lines.push(`- 考的是 golden 題庫的 ${total} 題小樣卷（主線 golden 軌為 6 題）`);
-  lines.push(`- 對照組：雲端 gpt-4o-mini 曾以這 ${total} 題拿 3/3（2026-07-15 實測）`);
-  lines.push('  （但書：3/3 那次跑的是舊版單行斷言，本次跑的是現在的防禦性斷言，');
-  lines.push(`  兩次的擷取邏輯不同；而且 ${total} 題的樣本小到單題翻面就是 33 個百分點。`);
-  lines.push('  這個對照足以說明「同一份 golden 可以換模型重考」，但不是精確的模型能力量測。）');
-  if (answeredCount < total) {
+  const scope =
+    providers > 1
+      ? `${questions} 題小樣卷 ×${providers} 個 provider，共 ${rows.length} 筆結果`
+      : `${questions} 題小樣卷`;
+  lines.push(`- 考的是 golden 題庫的 ${scope}（主線 golden 軌為 6 題）`);
+  if (questions === BASELINE_QUESTIONS) {
+    lines.push('- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3（2026-07-15 實測）');
+    lines.push('  （但書：3/3 那次跑的是舊版單行斷言，本次跑的是現在的防禦性斷言，');
+    lines.push('  兩次的擷取邏輯不同；而且 3 題的樣本小到單題翻面就是 33 個百分點。');
+    lines.push('  這個對照足以說明「同一份 golden 可以換模型重考」，但不是精確的模型能力量測。）');
+  } else {
+    lines.push(`- 沒有可比的對照組：歷史上的 gpt-4o-mini 3/3 考的是 3 題，本次是 ${questions} 題`);
+  }
+  if (unanswered > 0) {
     lines.push('');
-    lines.push(`> ⚠️ 其中 ${total - answeredCount} 題沒有拿到任何模型輸出，那幾題的紅`);
-    lines.push('> 不是答錯而是沒答到，請別計入模型品質。');
+    lines.push(`> ⚠️ 有 ${unanswered} 筆沒有拿到任何模型輸出（已排除在成績外）。`);
+    lines.push('> 那幾筆不是答錯而是沒答到，通常代表這次跑得不乾淨，建議重跑。');
   }
   return lines.join('\n');
 }

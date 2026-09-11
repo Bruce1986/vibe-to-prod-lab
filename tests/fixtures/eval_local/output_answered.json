@@ -1,14 +1,14 @@
 {
-  "evalId": "eval-wmD-2026-09-11T00:31:29",
+  "evalId": "eval-KZk-2026-09-11T01:30:36",
   "results": {
     "version": 3,
-    "timestamp": "2026-09-11T00:31:29.206Z",
+    "timestamp": "2026-09-11T01:30:36.928Z",
     "prompts": [
       {
         "raw": "你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：{{input}}",
         "label": "../../app/prompts/order_prompt.txt: 你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：{{input}}",
         "id": "4ef74a2665eac502d6be850fabd7fbfc505fc389b3af0ff15c92dbe7cf3d51c3",
-        "provider": "mock-boba-llm",
+        "provider": "file://mock_provider.js",
         "metrics": {
           "score": 3,
           "testPassCount": 3,
@@ -88,7 +88,7 @@
             }
           ]
         },
-        "id": "daf62037-b4c5-4d83-b992-d35e1e4d7cae",
+        "id": "d3249760-6bed-4edd-a9f6-9916efcac9b5",
         "latencyMs": 2,
         "namedScores": {},
         "prompt": {
@@ -100,7 +100,7 @@
         "promptIdx": 0,
         "provider": {
           "id": "file://mock_provider.js",
-          "label": "mock-boba-llm"
+          "label": ""
         },
         "response": {
           "output": "{\"status\":\"ok\",\"items\":[{\"name\":\"珍珠奶茶\",\"size\":\"L\",\"sweetness\":50,\"ice\":\"少冰\",\"toppings\":[],\"quantity\":1}]}"
@@ -197,7 +197,7 @@
             }
           ]
         },
-        "id": "77d3014b-b6be-4115-8faa-6ef8e2c85a1b",
+        "id": "a870750f-adfa-4557-8e72-f14bb9dd3733",
         "latencyMs": 1,
         "namedScores": {},
         "prompt": {
@@ -209,7 +209,7 @@
         "promptIdx": 0,
         "provider": {
           "id": "file://mock_provider.js",
-          "label": "mock-boba-llm"
+          "label": ""
         },
         "response": {
           "output": "{\"status\":\"ok\",\"items\":[{\"name\":\"珍珠奶茶\",\"size\":\"L\",\"sweetness\":100,\"ice\":\"去冰\",\"toppings\":[],\"quantity\":1}],\"notes\":\"跳跳糖不在配料菜單，已忽略。\"}"
@@ -306,7 +306,7 @@
             }
           ]
         },
-        "id": "a11a6c08-b13e-42f2-b58f-0b10e88e836c",
+        "id": "47d19ceb-e8d0-4450-816f-da95bcf6286b",
         "latencyMs": 1,
         "namedScores": {},
         "prompt": {
@@ -318,7 +318,7 @@
         "promptIdx": 0,
         "provider": {
           "id": "file://mock_provider.js",
-          "label": "mock-boba-llm"
+          "label": ""
         },
         "response": {
           "output": "{\"status\":\"need_clarification\",\"question\":\"請問想喝哪一款呢？我們有珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶。\"}"
@@ -413,20 +413,19 @@
           }
         }
       },
-      "durationMs": 38,
-      "evaluationDurationMs": 38
+      "durationMs": 46,
+      "evaluationDurationMs": 46
     }
   },
   "config": {
     "tags": {},
-    "description": "probe - mock provider against small test set",
+    "description": "boba-bot local eval（Ollama qwen2.5:1.5b、零 key）",
     "prompts": [
       "file://<擷取當時的暫存沙箱>/app/prompts/order_prompt.txt"
     ],
     "providers": [
       {
-        "id": "file://mock_provider.js",
-        "label": "mock-boba-llm"
+        "id": "file://mock_provider.js"
       }
     ],
     "tests": [
@@ -481,7 +480,7 @@
       "metadata": {}
     },
     "outputPath": [
-      "output-healthy.json"
+      "output.json"
     ],
     "extensions": [],
     "metadata": {},
@@ -493,8 +492,8 @@
     "nodeVersion": "v26.0.0",
     "platform": "darwin",
     "arch": "arm64",
-    "exportedAt": "2026-09-11T00:31:29.286Z",
-    "evaluationCreatedAt": "2026-09-11T00:31:29.206Z"
+    "exportedAt": "2026-09-11T01:30:37.017Z",
+    "evaluationCreatedAt": "2026-09-11T01:30:36.928Z"
   },
   "vars": [
     "input"

@@ -75,6 +75,23 @@ def test_provider_error_fixture_shape():
     )
 
 
+def test_error_field_does_not_distinguish_the_two_states():
+    """`error` 欄位存在與否分不出「沒作答」與「答錯」——這是判讀選型的關鍵依據。
+
+    summarize_eval.js 的檔頭用這件事否定「改成去找有 error 欄位的列」那條修法。
+    這種寫在註解裡的實證最容易悄悄過期，所以在這裡釘住：沒作答那份**每一筆都有**
+    error 欄位（內容是斷言訊息），跟模型真的答錯時長得一樣。
+    """
+    broken = json.loads(PROVIDER_ERROR.read_text(encoding="utf-8"))["results"]["results"]
+    assert all("error" in row for row in broken), (
+        "沒作答那份的每一筆都應該帶 error 欄位；若 promptfoo 改了行為，"
+        "summarize_eval.js 檔頭的推論依據要重新檢查"
+    )
+    assert all("Custom function returned false" in row["error"] for row in broken), (
+        "那些 error 的內容應該是斷言訊息，不是 provider 層的錯誤"
+    )
+
+
 def test_answered_fixture_shape():
     """正常那份的關鍵前提：每一題都有非空輸出，而且全部通過。"""
     data = json.loads(ANSWERED.read_text(encoding="utf-8"))
@@ -165,16 +182,81 @@ def test_score_reflects_actual_failures(tmp_path):
     assert COMPLETE_HEADING in summary
 
 
-def test_partial_no_answer_run_is_flagged(tmp_path):
-    """只有部分題目沒拿到輸出時，仍算完成，但要標出那幾題的紅不是答錯。"""
+def test_partial_no_answer_is_excluded_from_the_score(tmp_path):
+    """沒作答的題目不能算進分母——那正是本檔要防的誤讀，只是縮小成部分題目。
+
+    這裡把 3 題裡的 2 題改成沒輸出、沒通過，剩下 1 題答對。誠實的成績是
+    「答了 1 題、對 1 題」；若寫成 1/3 再擺在 gpt-4o-mini 的 3/3 旁邊，
+    讀者只會讀成「小模型爛到只對三分之一」。
+    """
     data = json.loads(ANSWERED.read_text(encoding="utf-8"))
-    data["results"]["results"][0]["response"]["output"] = ""
-    data["results"]["results"][0]["success"] = False
+    for row in data["results"]["results"][:2]:
+        row["response"]["output"] = ""
+        row["success"] = False
     partial = tmp_path / "output.json"
     partial.write_text(json.dumps(data), encoding="utf-8")
     summary = run_summary(partial)
     assert COMPLETE_HEADING in summary
-    assert "1 題沒有拿到任何模型輸出" in summary
+    assert "本次成績：1/1" in summary, "分母要是有作答的題數，不是總題數"
+    assert "本次成績：1/3" not in summary
+    assert "2 筆沒拿到模型輸出，不計分" in summary
+
+
+def test_multi_provider_run_does_not_distort_the_numbers(tmp_path):
+    """一列＝一題 ×一個 provider，所以列數不等於題數。
+
+    實測過（promptfoo 0.121.19，同一份 tests.small.yaml 配兩個 provider）：
+    `results.results` 會有 6 列、`testIdx` 是 [0,0,1,1,2,2]、`provider.label`
+    交替。下面照那個形狀由真實 fixture 衍生出兩個 provider 的版本，確認摘要
+    不會把 6 列講成「6 題」，也不會把歷史對照的 3/3 改寫成 6/6。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    rows = data["results"]["results"]
+    doubled = []
+    for row in rows:
+        for label in ("A", "B"):
+            clone = json.loads(json.dumps(row))
+            clone["provider"] = {"id": "file://mock_provider.js", "label": label}
+            doubled.append(clone)
+    data["results"]["results"] = doubled
+    multi = tmp_path / "output.json"
+    multi.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(multi)
+    assert "3 題小樣卷 ×2 個 provider，共 6 筆結果" in summary
+    assert "曾以這 3 題拿 3/3" in summary, "歷史對照的數字是固定事實，不能跟著本次題數變"
+    assert "6 題拿" not in summary
+    assert "本次成績：6/6" in summary
+
+
+def test_baseline_comparison_is_dropped_when_the_question_count_changes(tmp_path):
+    """題數不是 3 時就沒有可比的對照組，不能照樣印 3/3。"""
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    data["results"]["results"] = data["results"]["results"][:2]
+    two = tmp_path / "output.json"
+    two.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(two)
+    assert "沒有可比的對照組" in summary
+    # 「3/3」本身可以出現在說明為什麼不可比的那句話裡；不能出現的是把它
+    # 當成本次同卷對照的宣稱。
+    assert "曾以這" not in summary
+    assert "本次成績：2/2" in summary
+
+
+def test_wording_matches_whether_promptfoo_logged_errors(tmp_path):
+    """全部沒作答時，措辭要跟著 stats.errors 走，不能兩種狀態講同一句話。
+
+    errors=0（假 Ollama 回 404）時 promptfoo 記的是斷言失敗；errors>0（打不到
+    服務）時記的是 ERROR。原本無條件說「記成斷言失敗」，在後者會自相矛盾。
+    """
+    data = json.loads(PROVIDER_ERROR.read_text(encoding="utf-8"))
+    assert "記成斷言失敗" in run_summary(PROVIDER_ERROR)
+
+    data["results"]["stats"]["errors"] = len(data["results"]["results"])
+    errored = tmp_path / "output.json"
+    errored.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(errored)
+    assert "記成 ERROR" in summary
+    assert "記成斷言失敗" not in summary
 
 
 # --- workflow 真的有在用這支程式嗎 -------------------------------------------

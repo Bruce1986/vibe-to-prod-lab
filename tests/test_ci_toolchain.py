@@ -15,11 +15,35 @@ CI 上那正是最糟的失效：守門一條都沒跑，儀表板卻是綠的�
 """
 
 import os
+import re
 import shutil
+from pathlib import Path
 
 import pytest
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+QUALITY_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "quality.yml"
 IN_CI = os.environ.get("CI", "").lower() in {"1", "true", "yes"}
+
+
+def test_lint_test_job_installs_node():
+    """跑 pytest 的那個 job 必須自己裝 node，不能賭 runner 映像剛好有。
+
+    這條才是真正擋得住回歸的那道：下面 `which("node")` 只看執行當下的 PATH，
+    有人把 setup-node 從 quality.yml 拿掉、而 runner 剛好預裝 node 時，它照樣
+    綠——於是「兩份 node 測試會不會跑」又變回沒有人保證的事。
+    """
+    workflow = QUALITY_WORKFLOW.read_text(encoding="utf-8")
+    lint_test = workflow.split("  lint-test:", 1)
+    assert len(lint_test) == 2, "找不到 lint-test job——這條測試已對不上 quality.yml"
+    # 只看到下一個 job 為止，免得誤採 golden-eval 的 setup-node
+    body = re.split(r"\n  \w[\w-]*:\n", lint_test[1])[0]
+    assert "actions/setup-node" in body, (
+        "lint-test 沒有 actions/setup-node：tests/test_eval_summary.py 與 "
+        "tests/test_local_eval_asserts.py 會被整批靜默跳過，pytest 仍會全綠"
+    )
+    versions = set(re.findall(r"node-version:\s*\"?(\d+)\"?", workflow))
+    assert len(versions) == 1, f"各軌的 node 版本應該一致，目前有 {sorted(versions)}"
 
 
 @pytest.mark.skipif(not IN_CI, reason="本機允許沒有 node（那兩份會整批跳過）；CI 上不允許")

@@ -32,16 +32,16 @@ npx promptfoo eval -c promptfooconfig.local.yaml --no-progress-bar -o output.jso
 # → exit 100、output.json 合法、三筆 output 皆空、stats.errors=0
 
 # 2) output_answered.json —— 真的有作答（用 repo 自己的 mock provider 回放）
-#    把 promptfooconfig.local.yaml 的 providers 換成 `- id: file://mock_provider.js`
-#    （其餘不動，仍讀 tests.small.yaml），再跑一次 → exit 0、3/3
+#    把 promptfooconfig.local.yaml 的 providers 整段換成
+#    `providers:\n  - id: file://mock_provider.js`（不帶 label、其餘一字不動，
+#    仍讀 tests.small.yaml），再跑一次同一條指令 → exit 0、3/3
 ```
 
-搬進本目錄時只做兩件事，其餘一字不改：
+搬進本目錄時只做兩件事，其餘一字不改（**照上面跑出來的檔案，`config` 區塊
+會與庫裡這兩份逐字相同**，可以直接 diff 驗）：
 
 1. 改名成 `output_provider_error.json` / `output_answered.json`
-   （所以檔案裡內嵌的 `config.outputPath` 仍是當初的 `output.json` /
-   `output-healthy.json`、`config.description` 仍是那次 probe 的描述——
-   那是原檔的一部分，留著當產生痕跡）。
+   （所以檔案裡內嵌的 `config.outputPath` 仍是指令裡的 `output.json`）。
 2. 把 `config.prompts` 裡指向暫存沙箱的絕對路徑換成
    `<擷取當時的暫存沙箱>`——那是某一台機器某一次 session 的路徑，
    留著只會讓人以為它有意義。
