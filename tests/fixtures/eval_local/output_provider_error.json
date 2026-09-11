@@ -424,7 +424,7 @@
     "tags": {},
     "description": "boba-bot local eval（Ollama qwen2.5:1.5b、零 key）",
     "prompts": [
-      "file:///private/tmp/claude-501/-Users-bruce-GitHub-bruce1986/dcf85433-aae0-4ecd-843b-6f3fd8549b85/scratchpad/pfprobe/app/prompts/order_prompt.txt"
+      "file://<擷取當時的暫存沙箱>/app/prompts/order_prompt.txt"
     ],
     "providers": [
       {

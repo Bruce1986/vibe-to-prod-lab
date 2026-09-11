@@ -16,10 +16,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # pytest 裡有 35 條守門測試要靠 node 執行真正在跑的 JavaScript
-      # （tests.small.yaml 的斷言、summarize_eval.js 的判讀）。它們用
-      # skipif 保護，所以 node 不在 PATH 上時會**靜默跳過、CI 照樣全綠**
-      # ——本機實測 `env -i PATH=<空> pytest` 得到 35 skipped、exit 0。
+      # tests/test_eval_summary.py 與 tests/test_local_eval_asserts.py 整整
+      # 兩份測試都要靠 node 執行真正在跑的 JavaScript（tests.small.yaml 的
+      # 斷言、summarize_eval.js 的判讀）。它們用 skipif 保護，所以 node 不在
+      # PATH 上時會**整批靜默跳過、CI 照樣全綠**——本機實測
+      # `env -i PATH=<空目錄> pytest <那兩份>` 得到「全部 skipped」、exit 0。
       # 明確裝一份（與 golden-eval／eval-local 同版），別依賴 runner 映像
       # 剛好有；tests/test_ci_toolchain.py 會在 CI 上把「沒有 node」變成紅燈。
       - uses: actions/setup-node@v4

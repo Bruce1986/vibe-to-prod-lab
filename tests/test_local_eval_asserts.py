@@ -52,10 +52,20 @@ CASES = [
     (1, "覆誦範例後仍寫進跳跳糖", f"格式：{PROMPT_EXAMPLE}\n{HALLUCINATED}", False),
     (1, "正確忽略跳跳糖", NO_HALLUCINATION, True),
     (1, "格式壞到讀不出訂單", "抱歉，我不會做跳跳糖珍奶", False),
+    # 掃描器的邊角案例也要餵第 2 題——三份掃描器是逐字拷貝，只在第 1 題
+    # 驗邊角，等於另外兩份的掃描器從沒被這些輸入考過。
+    (1, "夾在 ```json 圍欄裡", f"```json\n{NO_HALLUCINATION}\n```", True),
+    (1, "答案前的散文有未配對的半形引號", f'顧客說"加跳跳糖\n{NO_HALLUCINATION}', True),
+    (1, "先吐草稿才給正式答案", f'草稿 {{"a":1}} 正式答案 {HALLUCINATED}', False),
+    (1, "輸出被截斷", HALLUCINATED[:40], False),
     # --- 第 3 題：資訊不足要反問 ---
     (2, "正確反問", NEEDS_CLARIFICATION, True),
     (2, "覆誦範例後才反問", f"範例：{PROMPT_EXAMPLE}\n我的回答：{NEEDS_CLARIFICATION}", True),
     (2, "該反問卻硬點一杯", OK_ORDER, False),
+    (2, "夾在 ```json 圍欄裡", f"```json\n{NEEDS_CLARIFICATION}\n```", True),
+    (2, "答案前的散文有未配對的半形引號", f'顧客說"來點好喝的\n{NEEDS_CLARIFICATION}', True),
+    (2, "先吐草稿才給正式答案", f'草稿 {{"a":1}} 正式答案 {NEEDS_CLARIFICATION}', True),
+    (2, "輸出被截斷", NEEDS_CLARIFICATION[:25], False),
 ]
 
 
@@ -94,6 +104,24 @@ def test_extracted_three_assertion_bodies():
     assert len(bodies) == 3, f"預期從 tests.small.yaml 取出 3 段斷言，實際 {len(bodies)} 段"
     for body in bodies:
         assert "return" in body
+
+
+def test_three_scanners_stay_byte_identical():
+    """三段斷言前面那截「掃平衡花括號」是逐字拷貝，必須保持同步。
+
+    這是一個原本只存在於作者腦中的隱含契約：只修其中一份（手動改個小 bug、
+    或複製貼上漏了一段）不會有任何東西變紅，因為下面的案例是逐段各測各的。
+    這條把契約釘成守門——真要精簡成共用檔（見 tests.small.yaml 的註解）時，
+    這條也會紅，提醒你回來一起改。
+    """
+    prefixes = [body.split("let obj = null;")[0] for body in _assert_bodies()]
+    assert all("cands.push" in prefix for prefix in prefixes), (
+        "抓不到掃描器那一截——tests.small.yaml 的寫法變了，這條測試已對不上"
+    )
+    assert prefixes[0] == prefixes[1] == prefixes[2], (
+        "三份掃描器已經不一致：改一份就要同步改另外兩份，"
+        "否則只有被測到的那一份是對的"
+    )
 
 
 @pytest.mark.parametrize(

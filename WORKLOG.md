@@ -116,9 +116,10 @@
   七個突變（拿掉沒作答判斷／成績寫死 3/3／改用 ERROR 列／空字串算作答／
   workflow 不呼叫判讀／拿掉自控 timeout／timeout 調到比 step 還長）全部致紅。
 - **同輪再修三處（錯誤處理視角）**：
-  ① `quality.yml` 的 `lint-test` 沒裝 node，而那 35 條要靠 node 跑「線上那份
-  JavaScript」的守門都用 `skipif` 保護——**本機實測 `env -i PATH=<空目錄>
-  pytest` 得到 35 skipped、離開碼 0**，也就是守門一條都沒跑、CI 照樣全綠。
+  ① `quality.yml` 的 `lint-test` 沒裝 node，而 `tests/test_eval_summary.py`
+  與 `tests/test_local_eval_asserts.py` 這兩份（要靠 node 跑「線上那份
+  JavaScript」的守門）都用 `skipif` 保護——**本機實測 `env -i PATH=<空目錄>
+  pytest <那兩份>` 得到整批 skipped、離開碼 0**，守門一條都沒跑、CI 照樣全綠。
   補上 `actions/setup-node@v4`（與另兩軌同為 22），並新增
   `tests/test_ci_toolchain.py`：CI 上沒有 node 就紅，本機維持可跳過。
   ② eval-local 的「拉取小模型」把 `MODEL=$(sed … config | head -1)` 的
@@ -132,3 +133,17 @@
 - 補記一個自己造的假守門：①的防護剛寫好時，配的兩個測試案例（結果列是
   null／字串）在**拿掉防護後照樣全綠**——它們在「全部沒作答」就先轉彎了，
   根本走不到會崩的算分那段。改成「有作答的列後面混一個 null」才真的致紅。
+- **同輪再修三處（接手性視角）**：
+  ④ 上一條記錄裡「35 條守門」這個數字**從寫下的那一刻就是錯的**（實際 38，
+  因為同一個 commit 又加了 3 個 parametrize 案例）。已把 quality.yml 註解、
+  `test_ci_toolchain.py` 與本檔的說法改成不寫死數量——這種會隨 parametrize
+  浮動的計數寫進四個地方，等於一次留四句遲早過期的宣稱。
+  ⑤ `tests.small.yaml` 的三段掃描器是逐字拷貝，但只有第 1 題被餵過圍欄／
+  覆誦範例／未配對引號那些邊角輸入——另外兩份的掃描器等於從沒被考過。
+  已把邊角案例補到第 2、3 題，並新增 `test_three_scanners_stay_byte_identical`
+  把「三份必須同步」這個原本只存在腦中的契約釘成守門（實測：只改其中一份
+  即致紅），tests.small.yaml 的註解也寫明。
+  ⑥ 兩份 fixture 只留下指向某台機器暫存沙箱的絕對路徑當線索，等於沒有
+  重現方式。已附上 `tests/fixtures/eval_local/fake_ollama.py`（產生那份
+  provider-error 原檔用的假 Ollama）與 README 裡可複製貼上的完整步驟，
+  並把絕對路徑換成佔位字串（README 寫明只動了這一處與檔名）。

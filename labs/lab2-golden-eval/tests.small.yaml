@@ -20,7 +20,10 @@
 #      JSON 花括號全被當成字串內容跳過，整個物件抽不到——又變成抽取器的失誤
 #      被算成模型答錯。
 #   2. 每掃完一個候選物件就把字串狀態歸零，不讓它污染下一個候選。
-# 三處重複這段掃描：promptfoo 的每條 assert 各自求值，本 repo 未查證
+# 三處重複這段掃描，且**必須逐字相同**——改一份就要同步改另外兩份，
+# 否則只有被測到的那一份是對的（tests/test_local_eval_asserts.py 的
+# test_three_scanners_stay_byte_identical 會在不同步時變紅）。
+# 之所以重複：promptfoo 的每條 assert 各自求值，本 repo 未查證
 # `type: javascript` 的 value 是否支援 file:// 指到共用檔（provider 欄位是
 # 支援的），要精簡請自行實測後再改，別當成已知限制。
 - description: 基本訂單（真模型版）
