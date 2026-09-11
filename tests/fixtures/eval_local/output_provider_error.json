@@ -1,0 +1,515 @@
+{
+  "evalId": "eval-30c-2026-09-11T00:28:53",
+  "results": {
+    "version": 3,
+    "timestamp": "2026-09-11T00:28:53.815Z",
+    "prompts": [
+      {
+        "raw": "你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：{{input}}",
+        "label": "../../app/prompts/order_prompt.txt: 你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：{{input}}",
+        "id": "4ef74a2665eac502d6be850fabd7fbfc505fc389b3af0ff15c92dbe7cf3d51c3",
+        "provider": "ollama:chat:qwen2.5:1.5b",
+        "metrics": {
+          "score": 0,
+          "testPassCount": 0,
+          "testFailCount": 3,
+          "testErrorCount": 0,
+          "assertPassCount": 0,
+          "assertFailCount": 6,
+          "totalLatencyMs": 81,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 3,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0
+              }
+            }
+          },
+          "namedScores": {},
+          "namedScoresCount": {},
+          "namedScoreWeights": {},
+          "cost": 0
+        }
+      }
+    ],
+    "results": [
+      {
+        "cost": 0,
+        "error": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.items?.[0]?.sweetness === 50;",
+        "gradingResult": {
+          "pass": false,
+          "score": 0,
+          "reason": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.items?.[0]?.sweetness === 50;",
+          "namedScores": {},
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to be valid JSON",
+              "assertion": {
+                "type": "is-json",
+                "value": "file://../../app/schemas/order.schema.json"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.items?.[0]?.sweetness === 50;",
+              "assertion": {
+                "type": "javascript",
+                "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.items?.[0]?.sweetness === 50;\n"
+              }
+            }
+          ]
+        },
+        "id": "a27d4e3c-ef81-40dc-8cdf-458ccfff12a5",
+        "latencyMs": 20,
+        "namedScores": {},
+        "prompt": {
+          "raw": "你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：我要一杯大杯珍珠奶茶，半糖少冰",
+          "label": "../../app/prompts/order_prompt.txt: 你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：{{input}}",
+          "config": {}
+        },
+        "promptId": "4ef74a2665eac502d6be850fabd7fbfc505fc389b3af0ff15c92dbe7cf3d51c3",
+        "promptIdx": 0,
+        "provider": {
+          "id": "ollama:chat:qwen2.5:1.5b",
+          "label": ""
+        },
+        "response": {
+          "output": ""
+        },
+        "score": 0,
+        "success": false,
+        "testCase": {
+          "description": "基本訂單（真模型版）",
+          "vars": {
+            "input": "我要一杯大杯珍珠奶茶，半糖少冰"
+          },
+          "assert": [
+            {
+              "type": "is-json",
+              "value": "file://../../app/schemas/order.schema.json"
+            },
+            {
+              "type": "javascript",
+              "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.items?.[0]?.sweetness === 50;\n"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 0,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "input": "我要一杯大杯珍珠奶茶，半糖少冰"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      },
+      {
+        "cost": 0,
+        "error": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\n// 沒抽到任何物件＝格式壞到讀不出訂單，判 Fail（不能算「沒點跳跳糖」）；\n// toppings 缺漏或不是陣列則代表模型沒把跳跳糖寫進配料，那是正解。\nif (obj === null) { return false; }\nconst toppings = obj?.items?.[0]?.toppings;\nreturn !(Array.isArray(toppings) && toppings.includes('跳跳糖'));",
+        "gradingResult": {
+          "pass": false,
+          "score": 0,
+          "reason": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\n// 沒抽到任何物件＝格式壞到讀不出訂單，判 Fail（不能算「沒點跳跳糖」）；\n// toppings 缺漏或不是陣列則代表模型沒把跳跳糖寫進配料，那是正解。\nif (obj === null) { return false; }\nconst toppings = obj?.items?.[0]?.toppings;\nreturn !(Array.isArray(toppings) && toppings.includes('跳跳糖'));",
+          "namedScores": {},
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to be valid JSON",
+              "assertion": {
+                "type": "is-json",
+                "value": "file://../../app/schemas/order.schema.json"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\n// 沒抽到任何物件＝格式壞到讀不出訂單，判 Fail（不能算「沒點跳跳糖」）；\n// toppings 缺漏或不是陣列則代表模型沒把跳跳糖寫進配料，那是正解。\nif (obj === null) { return false; }\nconst toppings = obj?.items?.[0]?.toppings;\nreturn !(Array.isArray(toppings) && toppings.includes('跳跳糖'));",
+              "assertion": {
+                "type": "javascript",
+                "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\n// 沒抽到任何物件＝格式壞到讀不出訂單，判 Fail（不能算「沒點跳跳糖」）；\n// toppings 缺漏或不是陣列則代表模型沒把跳跳糖寫進配料，那是正解。\nif (obj === null) { return false; }\nconst toppings = obj?.items?.[0]?.toppings;\nreturn !(Array.isArray(toppings) && toppings.includes('跳跳糖'));\n"
+              }
+            }
+          ]
+        },
+        "id": "e389f8bd-409e-44e9-86b0-ebea60a8fcb1",
+        "latencyMs": 28,
+        "namedScores": {},
+        "prompt": {
+          "raw": "你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：一杯大杯珍珠奶茶全糖去冰，加跳跳糖",
+          "label": "../../app/prompts/order_prompt.txt: 你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：{{input}}",
+          "config": {}
+        },
+        "promptId": "4ef74a2665eac502d6be850fabd7fbfc505fc389b3af0ff15c92dbe7cf3d51c3",
+        "promptIdx": 0,
+        "provider": {
+          "id": "ollama:chat:qwen2.5:1.5b",
+          "label": ""
+        },
+        "response": {
+          "output": ""
+        },
+        "score": 0,
+        "success": false,
+        "testCase": {
+          "description": "幻覺配料誘餌（真模型版）",
+          "vars": {
+            "input": "一杯大杯珍珠奶茶全糖去冰，加跳跳糖"
+          },
+          "assert": [
+            {
+              "type": "is-json",
+              "value": "file://../../app/schemas/order.schema.json"
+            },
+            {
+              "type": "javascript",
+              "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\n// 沒抽到任何物件＝格式壞到讀不出訂單，判 Fail（不能算「沒點跳跳糖」）；\n// toppings 缺漏或不是陣列則代表模型沒把跳跳糖寫進配料，那是正解。\nif (obj === null) { return false; }\nconst toppings = obj?.items?.[0]?.toppings;\nreturn !(Array.isArray(toppings) && toppings.includes('跳跳糖'));\n"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 1,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "input": "一杯大杯珍珠奶茶全糖去冰，加跳跳糖"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      },
+      {
+        "cost": 0,
+        "error": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.status === 'need_clarification';",
+        "gradingResult": {
+          "pass": false,
+          "score": 0,
+          "reason": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.status === 'need_clarification';",
+          "namedScores": {},
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Expected output to be valid JSON",
+              "assertion": {
+                "type": "is-json",
+                "value": "file://../../app/schemas/order.schema.json"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Custom function returned false\nconst cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.status === 'need_clarification';",
+              "assertion": {
+                "type": "javascript",
+                "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.status === 'need_clarification';\n"
+              }
+            }
+          ]
+        },
+        "id": "762c4b4c-8975-4793-b299-f18d71a4e5a6",
+        "latencyMs": 33,
+        "namedScores": {},
+        "prompt": {
+          "raw": "你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：來點好喝的",
+          "label": "../../app/prompts/order_prompt.txt: 你是「泡泡堂手搖飲」的點餐助理。請把顧客的口語訂單轉成 JSON，除了 JSON 以外不要輸出任何文字。\n\n菜單（品項）：珍珠奶茶、紅茶拿鐵、冬瓜茶、四季春茶、芋頭鮮奶\n容量：M、L（顧客未指定時用 M）\n甜度只能是 0、30、50、70、100（無糖=0、微糖=30、半糖=50、少糖=70、全糖=100）\n冰塊只能是：正常冰、少冰、微冰、去冰、熱\n配料只能使用菜單配料：珍珠、波霸、椰果、仙草、布丁；顧客點了菜單以外的配料就忽略，並在 notes 說明。\n聽不懂或資訊不足時，回 {\"status\": \"need_clarification\", \"question\": \"...\"}，不要瞎猜。\n\n輸出 JSON 格式：\n{\"status\": \"ok\", \"items\": [{\"name\": \"珍珠奶茶\", \"size\": \"M\", \"sweetness\": 50, \"ice\": \"少冰\", \"toppings\": [], \"quantity\": 1}], \"notes\": \"（選填）\"}\n\n顧客訂單：{{input}}",
+          "config": {}
+        },
+        "promptId": "4ef74a2665eac502d6be850fabd7fbfc505fc389b3af0ff15c92dbe7cf3d51c3",
+        "promptIdx": 0,
+        "provider": {
+          "id": "ollama:chat:qwen2.5:1.5b",
+          "label": ""
+        },
+        "response": {
+          "output": ""
+        },
+        "score": 0,
+        "success": false,
+        "testCase": {
+          "description": "模糊輸入要反問（真模型版）",
+          "vars": {
+            "input": "來點好喝的"
+          },
+          "assert": [
+            {
+              "type": "is-json",
+              "value": "file://../../app/schemas/order.schema.json"
+            },
+            {
+              "type": "javascript",
+              "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.status === 'need_clarification';\n"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 2,
+        "tokenUsage": {
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "total": 0,
+          "numRequests": 1,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          },
+          "assertions": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0,
+              "cacheReadInputTokens": 0,
+              "cacheCreationInputTokens": 0
+            }
+          }
+        },
+        "vars": {
+          "input": "來點好喝的"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      }
+    ],
+    "stats": {
+      "successes": 0,
+      "failures": 3,
+      "errors": 0,
+      "tokenUsage": {
+        "prompt": 0,
+        "completion": 0,
+        "cached": 0,
+        "total": 0,
+        "numRequests": 3,
+        "completionDetails": {
+          "reasoning": 0,
+          "acceptedPrediction": 0,
+          "rejectedPrediction": 0,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0
+        },
+        "assertions": {
+          "total": 0,
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "numRequests": 0,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0,
+            "cacheReadInputTokens": 0,
+            "cacheCreationInputTokens": 0
+          }
+        }
+      },
+      "durationMs": 47,
+      "evaluationDurationMs": 47
+    }
+  },
+  "config": {
+    "tags": {},
+    "description": "boba-bot local eval（Ollama qwen2.5:1.5b、零 key）",
+    "prompts": [
+      "file:///private/tmp/claude-501/-Users-bruce-GitHub-bruce1986/dcf85433-aae0-4ecd-843b-6f3fd8549b85/scratchpad/pfprobe/app/prompts/order_prompt.txt"
+    ],
+    "providers": [
+      {
+        "id": "ollama:chat:qwen2.5:1.5b",
+        "config": {
+          "temperature": 0,
+          "num_predict": 512
+        }
+      }
+    ],
+    "tests": [
+      {
+        "description": "基本訂單（真模型版）",
+        "vars": {
+          "input": "我要一杯大杯珍珠奶茶，半糖少冰"
+        },
+        "assert": [
+          {
+            "type": "javascript",
+            "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.items?.[0]?.sweetness === 50;\n"
+          }
+        ]
+      },
+      {
+        "description": "幻覺配料誘餌（真模型版）",
+        "vars": {
+          "input": "一杯大杯珍珠奶茶全糖去冰，加跳跳糖"
+        },
+        "assert": [
+          {
+            "type": "javascript",
+            "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\n// 沒抽到任何物件＝格式壞到讀不出訂單，判 Fail（不能算「沒點跳跳糖」）；\n// toppings 缺漏或不是陣列則代表模型沒把跳跳糖寫進配料，那是正解。\nif (obj === null) { return false; }\nconst toppings = obj?.items?.[0]?.toppings;\nreturn !(Array.isArray(toppings) && toppings.includes('跳跳糖'));\n"
+          }
+        ]
+      },
+      {
+        "description": "模糊輸入要反問（真模型版）",
+        "vars": {
+          "input": "來點好喝的"
+        },
+        "assert": [
+          {
+            "type": "javascript",
+            "value": "const cands = []; let depth = 0, start = -1, inStr = false, esc = false;\nfor (let i = 0; i < output.length; i++) {\n  const c = output[i];\n  if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }\n  if (inStr) { if (esc) esc = false; else if (c === '\\\\') esc = true; else if (c === '\"') inStr = false; continue; }\n  if (c === '\"') { inStr = true; continue; }\n  if (c === '{') { depth++; }\n  else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }\n}\nlet obj = null;\nfor (let i = cands.length - 1; i >= 0 && obj === null; i--) {\n  try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }\n}\nreturn obj?.status === 'need_clarification';\n"
+          }
+        ]
+      }
+    ],
+    "env": {},
+    "sharing": false,
+    "defaultTest": {
+      "assert": [
+        {
+          "type": "is-json",
+          "value": "file://../../app/schemas/order.schema.json"
+        }
+      ],
+      "vars": {},
+      "options": {},
+      "metadata": {}
+    },
+    "outputPath": [
+      "output.json"
+    ],
+    "extensions": [],
+    "metadata": {},
+    "evaluateOptions": {}
+  },
+  "shareableUrl": null,
+  "metadata": {
+    "promptfooVersion": "0.121.19",
+    "nodeVersion": "v26.0.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "exportedAt": "2026-09-11T00:28:53.941Z",
+    "evaluationCreatedAt": "2026-09-11T00:28:53.815Z"
+  },
+  "vars": [
+    "input"
+  ],
+  "runtimeOptions": {
+    "eventSource": "cli",
+    "showProgressBar": false,
+    "repeat": 1,
+    "maxConcurrency": 4,
+    "cache": true
+  }
+}

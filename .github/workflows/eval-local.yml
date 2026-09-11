@@ -82,39 +82,38 @@ jobs:
         timeout-minutes: 10
         working-directory: labs/lab2-golden-eval
         run: |
+          # 自己用 coreutils 的 timeout 控時，而不是只靠 step 層的 timeout-minutes：
+          # step 層一旦先觸發，GitHub 直接砍掉整個 run block，下面分辨「基礎設施壞掉
+          # ／沒作答／答錯」的判讀與 step summary 全都不會執行——那正是本檔在 job 層
+          # 特別提防的同一種失效，只是換到風險更高的這一層（CPU 推論是全流程最慢、
+          # 最可能吃滿時間的一段）。480 秒＝給判讀留 2 分鐘，仍在 step 的 10 分鐘內。
           EXIT=0
-          npx -y promptfoo@0.121.19 eval -c promptfooconfig.local.yaml \
+          timeout 480 npx -y promptfoo@0.121.19 eval -c promptfooconfig.local.yaml \
             --no-progress-bar -o output.json || EXIT=$?
           # 評測非零有三種意義完全不同的原因，摘要不能混為一談：
           #   1. Ollama 半路死掉        → 基礎設施故障
-          #   2. promptfoo 沒產出結果檔 → 執行期／設定錯誤（config、provider 打錯）
+          #   2. 模型沒有真的作答       → 執行期／設定錯誤（模型沒拉到、OOM、請求被拒）
           #   3. 以上皆非              → 模型答錯，預期內的教學訊號
-          # 只探測 daemon 存活不足以區分 2 與 3：config 打錯時 daemon 照樣活得好好的，
+          # 只探測 daemon 存活不足以區分 2 與 3：模型載入失敗時 daemon 照樣活得好好的，
           # 卻會被報成「模型答錯」，把設定 bug 誤導成教學素材。
-          if ! curl -sf http://localhost:11434/api/tags > /dev/null; then
+          # 2 與 3 的判讀在 summarize_eval.js 裡（含實測依據與被它推翻的兩種直覺修法），
+          # 由 tests/test_eval_summary.py 守門；這裡只負責 1，因為那要即時探測服務。
+          if [ "$EXIT" = "124" ]; then
+            {
+              echo "### ⚠️ eval-local 未完成——評測逾時，不是模型品質訊號"
+              echo ""
+              echo "promptfoo 在 8 分鐘內沒有跑完（runner 的 CPU 較慢，或推論卡住）。"
+              echo "這一次的紅**不能**當成「小模型答錯」，請重跑；若經常逾時，請同時"
+              echo "調高上面的 \`timeout 480\`、本步驟的 timeout-minutes 與 job 層的 timeout-minutes。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif ! curl -sf http://localhost:11434/api/tags > /dev/null; then
             {
               echo "### ⚠️ eval-local 未完成——基礎設施故障，不是模型品質訊號"
               echo ""
               echo "評測結束時 Ollama 已無回應（服務中途死亡或被 OOM 殺掉）。"
               echo "這一次的紅**不能**當成「小模型答錯」來解讀，請重跑。"
             } >> "$GITHUB_STEP_SUMMARY"
-          elif [ ! -s output.json ] \
-            || ! node -e 'JSON.parse(require("fs").readFileSync("output.json","utf8"))' 2>/dev/null; then
-            {
-              echo "### ⚠️ eval-local 未完成——執行期錯誤，不是模型品質訊號"
-              echo ""
-              echo "promptfoo 沒有產出可解析的結果檔（output.json），代表評測"
-              echo "根本沒跑完——多半是 config／provider 設定錯誤，而不是小模型答錯。"
-              echo "請看上方 promptfoo 的錯誤輸出，**不要**把這次的紅當成模型品質訊號。"
-            } >> "$GITHUB_STEP_SUMMARY"
           else
-            {
-              echo "### 🏠 eval-local 完成（${MODEL:-未知模型} @ CI runner CPU）"
-              echo ""
-              echo "- 零 API key、零外部帳號、零費用——模型就跑在 runner 上"
-              echo "- 這是 **monitor** 不是 gate：紅色是資訊，不擋部署"
-              echo "- 考的是 golden 題庫的 3 題小樣卷（主線 golden 軌為 6 題）"
-              echo "- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3（2026-07-15 實測）"
-            } >> "$GITHUB_STEP_SUMMARY"
+            node summarize_eval.js output.json >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$EXIT"

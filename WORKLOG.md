@@ -89,3 +89,29 @@
   保留為教材（provider 抽象讓 golden 題目與 prompt 免改；實際出力的是
   provider 設定、生成參數、模型佈建與斷言寫法加固——不是「只改一行」，
   這點在 docs/02-llm-quality.md 已誠實寫明，兩處說法須一致）。
+
+### 2026-09-11（加分關的結果判讀：把「沒作答」與「答錯」分開）
+
+- **問題**：eval-local 原本用「Ollama daemon 還活著」＋「output.json 存在
+  且能 parse」兩道判斷來區分基礎設施故障／設定錯誤／模型答錯。**實測推翻
+  第二道**（promptfoo 0.121.19，架一個對 `/api/tags` 回 200、對 `/api/chat`
+  回 404 `model not found` 的假 Ollama）：promptfoo 正常結束（exit 100）並
+  寫出完全合法的 output.json，三筆 `response.output` 全是空字串，
+  `stats.errors` 是 **0**、`failureReason` 是 ASSERT。於是整輪落進成功分支，
+  摘要印出「🏠 eval-local 完成」並複述「雲端 gpt-4o-mini 曾拿 3/3」——
+  讀者只會看到「小模型 0/3」，而真相是模型一題都沒答。
+- **順帶推翻的直覺修法**：「改成去找 error／failureReason=ERROR 的結果列」
+  在這個狀態下是假守門（那個計數就是 0）。分得出來的訊號只有一個：
+  **沒有任何一筆拿到非空的模型輸出**。這條也寫成突變測試釘住。
+- **修正**：判讀抽成 `labs/lab2-golden-eval/summarize_eval.js`（workflow 的
+  run block 只有真的在 CI 跑一次才會執行，寫錯沒有守門會紅），新增
+  `tests/test_eval_summary.py` 用兩份 **promptfoo 實跑出來的原始 output.json**
+  兩側都驗；摘要同時改成報出「本次成績 X/N」而不是只複述歷史對照，並把
+  lab README 那段誠實但書一併帶進摘要。
+- **另修**：評測指令改用 `timeout 480` 自己控時。step 層的 `timeout-minutes`
+  先觸發時 GitHub 會直接砍掉整個 run block，精心分層的摘要一行都不會執行
+  ——那正是本檔在 job 層特別提防、卻沒有防到這一層（最慢、最可能吃滿時間的
+  CPU 推論）的同一種失效。逾時另有專屬摘要。
+- 驗證：pytest 61 綠（原 48 ＋ 新 13）、`ruff check app tests labs` 乾淨；
+  七個突變（拿掉沒作答判斷／成績寫死 3/3／改用 ERROR 列／空字串算作答／
+  workflow 不呼叫判讀／拿掉自控 timeout／timeout 調到比 step 還長）全部致紅。
