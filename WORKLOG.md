@@ -115,3 +115,20 @@
 - 驗證：pytest 61 綠（原 48 ＋ 新 13）、`ruff check app tests labs` 乾淨；
   七個突變（拿掉沒作答判斷／成績寫死 3/3／改用 ERROR 列／空字串算作答／
   workflow 不呼叫判讀／拿掉自控 timeout／timeout 調到比 step 還長）全部致紅。
+- **同輪再修三處（錯誤處理視角）**：
+  ① `quality.yml` 的 `lint-test` 沒裝 node，而那 35 條要靠 node 跑「線上那份
+  JavaScript」的守門都用 `skipif` 保護——**本機實測 `env -i PATH=<空目錄>
+  pytest` 得到 35 skipped、離開碼 0**，也就是守門一條都沒跑、CI 照樣全綠。
+  補上 `actions/setup-node@v4`（與另兩軌同為 22），並新增
+  `tests/test_ci_toolchain.py`：CI 上沒有 node 就紅，本機維持可跳過。
+  ② eval-local 的「拉取小模型」把 `MODEL=$(sed … config | head -1)` 的
+  結果交給 `-z` 判斷，但 GitHub Actions 的 run 預設是 `bash -eo pipefail`，
+  config 不存在時 sed 回非零、`set -e` 當場中止，那句友善的 `::error::`
+  永遠印不出來（實測：修正前只吐 `sed: …: No such file or directory`，
+  修正後吐 `::error::找不到 …`）。改成先檢查檔案存在。
+  ③ `summarize_eval.js` 對非物件的結果列會拋 TypeError（崩掉＝step summary
+  一片空白），加上防護；`run_summary` 改成不吃 `check=True`，讓 node 的
+  stderr 出現在失敗訊息裡——守門自己紅的時候要看得出原因。
+- 補記一個自己造的假守門：①的防護剛寫好時，配的兩個測試案例（結果列是
+  null／字串）在**拿掉防護後照樣全綠**——它們在「全部沒作答」就先轉彎了，
+  根本走不到會崩的算分那段。改成「有作答的列後面混一個 null」才真的致紅。

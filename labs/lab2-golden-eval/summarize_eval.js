@@ -51,6 +51,12 @@ function readResults(path) {
   if (rows.length === 0) {
     return { kind: 'unreadable', detail: `${path} 一筆結果都沒有` };
   }
+  // 結果列不是物件時寧可整份判成讀不懂，也不要讓下面的取值拋 TypeError：
+  // 這支程式崩掉＝step summary 一個字都沒有，比印錯話更難查。
+  const badRow = rows.findIndex((row) => row === null || typeof row !== 'object');
+  if (badRow !== -1) {
+    return { kind: 'unreadable', detail: `${path} 第 ${badRow + 1} 筆結果不是物件` };
+  }
   const stats = results.stats && typeof results.stats === 'object' ? results.stats : {};
   return { kind: 'ok', rows, stats };
 }

@@ -61,10 +61,20 @@ jobs:
         run: |
           # 要拉哪顆模型，以 config 為單一真相——否則「想加碼就把 config 換成
           # qwen2.5:3b」會拉了 1.5b 卻去打 3b，得到 model not found 的假紅燈。
+          # 先確認檔案在：GitHub Actions 的 run 預設是 `bash -eo pipefail`，
+          # 而 `VAR=$(cmd)` 的結束碼就是 cmd 的結束碼——檔案不存在時 sed 回非零，
+          # set -e 會當場中止整個 step，下面那句友善的 ::error:: 永遠不會印出來，
+          # 只留下 sed 自己的英文訊息。這個 repo 才剛把 config 改過一輪檔名
+          # （*.live.yaml → *.local.yaml），檔案被搬走不是假想情境。
+          CONFIG=labs/lab2-golden-eval/promptfooconfig.local.yaml
+          if [ ! -f "$CONFIG" ]; then
+            echo "::error::找不到 $CONFIG——config 被改名或搬走了？"
+            exit 1
+          fi
           MODEL=$(sed -n 's/^[[:space:]]*- id:[[:space:]]*ollama:chat:\(.*\)$/\1/p' \
-            labs/lab2-golden-eval/promptfooconfig.local.yaml | head -1)
+            "$CONFIG" | head -1)
           if [ -z "$MODEL" ]; then
-            echo "::error::無法從 promptfooconfig.local.yaml 解析出 ollama:chat: 的模型名"
+            echo "::error::無法從 $CONFIG 解析出 ollama:chat: 的模型名"
             exit 1
           fi
           echo "config 指定的模型：$MODEL"

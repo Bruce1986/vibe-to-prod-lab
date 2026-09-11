@@ -12,6 +12,7 @@
 """
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -33,15 +34,25 @@ COMPLETE_HEADING = "eval-local 完成"
 
 
 def run_summary(output_path, model="qwen2.5:1.5b", cwd=None):
-    """跑真正的 summarize_eval.js，回傳它印出來的 markdown。"""
+    """跑真正的 summarize_eval.js，回傳它印出來的 markdown。
+
+    刻意不用 `check=True`：CalledProcessError 的訊息只有「exit status 1」，
+    node 真正丟的 TypeError／stack trace 留在 capture 起來的 stderr 裡不會被
+    印出來。這支程式崩掉正是本檔要守的事故之一（崩掉＝step summary 一片空白），
+    守門自己紅的時候得看得出原因。
+    """
     result = subprocess.run(
         [NODE, str(SUMMARIZER), str(output_path)],
         capture_output=True,
         text=True,
         timeout=30,
-        check=True,
+        check=False,
         cwd=str(cwd or REPO_ROOT),
-        env={"PATH": "/usr/bin:/bin:/usr/local/bin", "MODEL": model},
+        env={"PATH": os.environ.get("PATH", ""), "MODEL": model},
+    )
+    assert result.returncode == 0, (
+        f"summarize_eval.js 以 {result.returncode} 結束——它應該永遠印得出東西。\n"
+        f"stderr:\n{result.stderr}"
     )
     return result.stdout
 
@@ -98,6 +109,25 @@ def test_missing_output_file_is_reported_as_runtime_error():
         ("不是 JSON", "promptfoo crashed"),
         ("沒有 results 陣列", '{"results": {"stats": {}}}'),
         ("一筆結果都沒有", '{"results": {"results": [], "stats": {}}}'),
+        ("結果列是 null", '{"results": {"results": [null], "stats": {}}}'),
+        ("結果列是字串", '{"results": {"results": ["oops"], "stats": {}}}'),
+        # 這一筆才真的會走到算分那段：前一列有作答，answered 數 > 0，
+        # 於是 rows.filter(row => row.success) 會碰到 null。上面兩筆在
+        # 「全部沒作答」就先轉彎了，測不到崩潰路徑（突變實測確認過）。
+        (
+            "有作答的列後面混一個 null",
+            json.dumps(
+                {
+                    "results": {
+                        "results": [
+                            {"response": {"output": '{"status":"ok"}'}, "success": True},
+                            None,
+                        ],
+                        "stats": {"errors": 0},
+                    }
+                }
+            ),
+        ),
     ],
 )
 def test_unusable_output_files_are_runtime_errors(tmp_path, label, content):
