@@ -57,9 +57,9 @@ style: |
 
 **與其說它幻覺，不如說它不夠新**：診斷詞用錯，處方就跟著錯。
 同型失誤：另一專案被說「`gpt-4o-mini` 尚未發布、可能是筆誤」——
-正是等下加分關要用的模型
+它不但存在，還替本課的 golden set 拿過 3/3（後來平台退役了，訃聞見後）
 
-<!-- 2 分。三個梗照順序丟：現役被判虛構 → 建議降到已退役 → 「不存在」的 gpt-4o-mini 正是 /live-eval 在用的。收尾丟問題：「那誰來審 reviewer？」→ 用資料（golden set）當裁判。 -->
+<!-- 2 分。三個梗照順序丟：現役被判虛構 → 建議降到已退役 → 被說「不存在」的 gpt-4o-mini 還替本課考過 3/3（平台退役故事後面訃聞頁講）。收尾丟問題：「那誰來審 reviewer？」→ 用資料（golden set）當裁判。 -->
 
 ## Golden Dataset：你的 AI 考古題庫
 
@@ -239,17 +239,21 @@ pip install lettucedetect        # MIT、17M–210M 參數、CPU 即時
 
 <!-- 1.5 分。數據來源在深讀講義（arXiv 連結）。讓大家記住區間就好：「一到五成」。 -->
 
-## LLM-as-judge 的三個誠實提醒＋一則訃聞
+## LLM-as-judge 的三個誠實提醒＋同一年的兩則訃聞
 
 1. **Judge 也會錯**——它自己就是 LLM（想想案例①），判準要抽樣複核
 2. **成本**——每筆檢查都是推論，golden set 大了要算錢
 3. **可重現性**——judge 回應要 cache／預錄，否則 CI 紅綠會抖
 
-一則訃聞：**OpenAI Evals 平台 2026-11-30 關閉**，官方教學教大家搬家
-→ eval 工具選型要看**存續風險**；你的 golden set 要**工具中立**
-（本 repo 同一批 golden 同時餵 promptfoo 與 pytest——雙軌就是保險）
+兩則訃聞：**OpenAI Evals 平台 2026-11-30 關閉**；
+**GitHub Models 2026-07-30 全面退役**——本課加分關原本用它，
+備課期間親歷 7/1 公告 → 換引擎：**題目與 prompt 一字未改**，
+出力的是 provider 設定＋生成參數＋模型佈建＋斷言寫法加固
 
-<!-- 2 分。訃聞梗點到為止。工具中立是實務忠告：資產是 golden data，不是工具設定檔。 -->
+→ eval 工具選型要看**存續風險**；golden set 要**工具中立**
+（同一批 golden 餵 promptfoo＋pytest 雙軌——保險就是這樣買的）
+
+<!-- 2.5 分。第二則訃聞是親身故事：加分關差 19 天帶著死平台上課，遷移到本地 Ollama。誠實講代價：golden 題目與 prompt 零改動、斷言要驗的東西也沒變，但斷言寫法要加防禦（小模型會輸出殘缺 JSON）、provider 設定要重寫、要補 num_predict（不補就被截斷 JSON）、還要在 CI 裝 Ollama 拉模型。資產是 golden data，不是任何平台的設定檔。 -->
 
 ## 帶回團隊的最小起步法（三步、一個下午）
 
@@ -271,7 +275,7 @@ pip install lettucedetect        # MIT、17M–210M 參數、CPU 即時
 2. **情境劇**：刪掉 prompt 約束行 → push → 看安全網收網（讀紅報告）
 3. 修復回綠（`git revert` 或手動）
 4. 加一筆**你自己的** golden case（fixtures＋tests.yaml 同步）
-5. 加分關 **`/live-eval`**：GitHub Models 免 key 打真 LLM——
-   看真模型過不過同一套契約
+5. 加分關 **`/local-eval`**：小模型直接跑在 CI runner 上（零 token 零費用）——
+   同一份考卷：1.5B 拿 1/3、雲端 gpt-4o-mini 拿 3/3
 
 <!-- 14:48–15:08 實作＋提問，15:08–15:16 休息。巡場重點：改了 prompt 沒 push 的人（CI 不會動）、tests.yaml 的 input 沒和 fixtures key 一字不差的人。 -->

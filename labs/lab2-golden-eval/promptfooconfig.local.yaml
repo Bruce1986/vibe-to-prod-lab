@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# 加分關（/local-eval）：本地小模型評測——零 API key、零帳號、零費用。
+# 模型跑在 CI runner（或你自己裝了 Ollama 的機器）上；小模型考不過契約
+# 是預期內的資訊（幻覺誘餌、瞎猜），「紅色也是資訊」正是教學重點。
+# 注意 num_predict：Ollama 預設輸出上限會把 JSON 攔腰截斷（實測教訓）。
+description: boba-bot local eval（Ollama qwen2.5:1.5b、零 key）
+
+prompts:
+  - file://../../app/prompts/order_prompt.txt
+
+providers:
+  - id: ollama:chat:qwen2.5:1.5b
+    config:
+      temperature: 0
+      num_predict: 512
+      # 刻意不強制 JSON 輸出：本 lab 要觀測小模型原始輸出的格式失誤——
+      # is-json 契約掛掉正是「紅色也是資訊」的教學素材，強制 format
+      # 反而遮掉要展示的失敗模式。
+      # （另有一說是 Ollama 的 format 欄位得放在 config.passthrough 底下才生效、
+      #  放 config 直下會被當成 options 而靜默無效——本 repo **未實測驗證**，
+      #  真要改成強制 JSON 輸出前請自己先跑一次確認，別當成已知事實。）
+
+defaultTest:
+  assert:
+    - type: is-json
+      value: file://../../app/schemas/order.schema.json
+
+tests: file://tests.small.yaml

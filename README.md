@@ -30,7 +30,7 @@
 | 1 | 單元／整合／契約／回歸測試 | 15 分 | [labs/lab1-testing](labs/lab1-testing/README.md) 或 `/lab1` |
 | 2 | Golden Dataset 與 Prompt Regression | 20 分 | [labs/lab2-golden-eval](labs/lab2-golden-eval/README.md) 或 `/lab2` |
 | 3 | CI/CD、Observability、Logging | 15 分 | [labs/lab3-production](labs/lab3-production/README.md) 或 `/lab3` |
-| 加分關 | 免 API key 打真 LLM（GitHub Models） | 選配 | `/live-eval` |
+| 加分關 | 零 token 跑真 LLM（本地小模型 on CI runner） | 選配 | `/local-eval` |
 
 ## Repo 地圖
 
@@ -42,8 +42,8 @@ labs/           三個 lab 的導引（各自有 README 與 AGENTS.md）
 slides/         Marp 投影片（push 後由 CI 自動發佈 GitHub Pages）
 docs/           深讀講義（課後看）＋講師設定
 templates/      帶回你團隊用的範本：AGENTS.sample.md、PR checklist、CI 範本
-.claude/skills/ /course-help /lab1 /lab2 /lab3 /live-eval（兩種 AI 工具通用）
-.github/workflows/  quality（品質管線）、eval-live（加分關）、slides（投影片）
+.claude/skills/ /course-help /lab1 /lab2 /lab3 /local-eval（兩種 AI 工具通用）
+.github/workflows/  quality（品質管線）、eval-local（加分關）、slides（投影片）
 ```
 
 ## 環境需求
@@ -63,8 +63,13 @@ python -m pytest -q   # 全綠 = 起點正確
 
 **Q：為什麼不用真的 LLM？**
 課堂主軌用預錄回放，所以零 key、零費用、結果可重現——這正是「把 LLM
-隔離在介面後面」的測試設計。想打真模型：`/live-eval` 用 GitHub Models
-免 key 跑（在 GitHub Actions 上，有 rate limit）。
+隔離在介面後面」的測試設計。想考真模型：`/local-eval` 會在 GitHub Actions
+的 runner 上啟動本地小模型（Ollama），考同一份 golden 題庫裡的 3 題小樣卷
+（主線 golden 軌是 6 題）——一樣零 API key、零帳號、零費用。（本 repo 的
+加分關最初用 GitHub Models 免費推論實作，該服務已於 2026-07-30 退役；因為
+golden set 與 provider 解耦，題目與 prompt 原封不動搬過來、斷言要驗的東西
+也一字未改（只是寫法改成防禦性，好吃下小模型的格式雜訊），改的是 provider
+設定與模型佈建——這段歷史本身就是單元二的教材。）
 
 **Q：mock 怎麼知道我的 prompt 變好變壞？**
 教學模擬器：`mock_provider.js` 與 `FakeLLMClient` 以 prompt 是否包含
