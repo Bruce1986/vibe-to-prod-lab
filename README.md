@@ -42,7 +42,7 @@ labs/           三個 lab 的導引（各自有 README 與 AGENTS.md）
 slides/         Marp 投影片（push 後由 CI 自動發佈 GitHub Pages）
 docs/           深讀講義（課後看）＋講師設定
 templates/      帶回你團隊用的範本：AGENTS.sample.md、coding-review-principles.md、
-                PR checklist、CI 範本
+                pr-checklist.md、CI 範本
 .claude/skills/ /course-help /lab1 /lab2 /lab3 /live-eval（兩種 AI 工具通用）
 .github/workflows/  quality（品質管線）、eval-live（加分關）、slides（投影片）
 ```
@@ -75,8 +75,9 @@ python -m pytest -q   # 全綠 = 起點正確
 
 **Q：課後想把這套搬回團隊？**
 從 [templates/](templates/) 開始：AGENTS.sample.md（改名 AGENTS.md 放你的
-repo root）、coding-review-principles.md（AGENTS.md 的 Style／Review 兩節要貼的
-原文）、pr-checklist.md、workflows/quality.sample.yml。
+repo root）、coding-review-principles.md（裡頭的「撰寫十條」與「Review 八條」兩份
+清單，就是 AGENTS.md 的 Style／Review 兩節要貼的原文；檔頭那段來源與維護者說明是
+課程內部用的，不要跟著貼）、pr-checklist.md、workflows/quality.sample.yml。
 
 ## 授權
 

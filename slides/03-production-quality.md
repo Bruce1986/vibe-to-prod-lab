@@ -152,7 +152,8 @@ phoenix serve        # → http://localhost:6006
 1. **`AGENTS.sample.md`**——把今天的規範寫給你團隊的 AI 看
    （規範不落地成檔案，AI 就每次都用預設值；複製到 repo root 改名即生效）
 2. **`coding-review-principles.md`**——撰寫十條＋Review 八條，
-   也就是 AGENTS.md 的 Style／Review 兩節要貼上的原文
+   這兩份清單就是 AGENTS.md 的 Style／Review 兩節要貼上的原文
+   （檔頭的來源說明是課程內部用的，不用跟著貼）
 3. **`pr-checklist.md`**——AI 時代的 PR 品質清單（作者版＋reviewer 版）
 4. **`workflows/quality.sample.yml`**——三關品質管線，換佔位符就能用
 
