@@ -115,7 +115,7 @@
   - 上面那條「`quality.yml` 三關」在第 4 輪被改寫時**改錯了**：三關是三個 job
     （`lint-test`／`golden-eval`／`deploy-gate`），不是 ruff／pytest／golden-eval
     三項——把 lint-test 拆成兩關又漏掉 deploy-gate，正好與同一個 PR 也動到的
-    `slides/03-production-quality.md`（第 38–44 行的 `quality.yml` 節錄，本 PR 未改
+    `slides/03-production-quality.md`（第 36–46 行的 `quality.yml` 節錄，本 PR 未改
     那幾行）自相矛盾；順帶「slides.yml 只涵蓋 Python 與 prompt」也不對，它處理的
     是 markdown。兩處已改。（獨立的 reviewer 與 Codex 各自抓到同一條。）
   - 「14 項」的組成拆解一直加不起來：原寫「八條重新分組＋撰寫十條第 1、9 條＋兩項
@@ -139,7 +139,30 @@
   - `coding-review-principles.md` 的「修改請與來源文件同步」對複製走的人不可能履行
     （來源檔在講師的另一個 repo）。已限定為「給教材維護者」，並明講複製走的人不受
     此約束。
+- 第 9 輪（迴歸審第 8 輪的修正／不看 diff 的全文通讀／讀者操作路徑三個視角）三條全修：
+  - **第 8 輪自稱修好的「第三處加不起來」其實沒修好**：`AGENTS.sample.md` 把總數從
+    錯的 10 改成 14，卻沒把讓算式成立的「第 4 條在作者／reviewer 兩區各一項」一併
+    搬過來，於是 8＋3＋2＝13 仍然對不上 14——顯眼的算式錯誤只是被換成隱蔽的。兩個
+    獨立視角各自抓到同一條。已比照另兩份的寫法補上，並拆掉外層括號，讓三段數字各
+    自可數。
+  - `pr-checklist.md` 與 `coding-review-principles.md` 互指對方時漏了「本課程 repo 的」
+    限定語。這兩份的設計用途就是被整段複製到讀者自己的 repo（前者甚至指名貼進
+    `.github/pull_request_template.md`），一搬走 `templates/…` 就失去語境，正是本 PR
+    要根除的同一類缺陷。已補齊，與 `AGENTS.sample.md` 開頭既有的寫法一致。
+  - WORKLOG 引用的「`slides/03-production-quality.md` 第 38–44 行」少算一行：該
+    `quality.yml` 節錄的 fenced block 是第 36–46 行，38–44 會把 `deploy-gate` 的最後
+    一行切掉。已改為 36–46。
+  本輪查證屬實、勿重審：`pr-checklist.md` 實數 8＋6＝14（作者區 8、reviewer 區 6）；
+  三份 templates 的組成拆解現在各自加總皆為 8＋4＋2＝14；`quality.yml` 三個 job 與
+  投影片節錄、WORKLOG 描述三方一致；`slides.yml` 的建置／索引頁／鏡像 artifact／
+  部署四步與 WORKLOG 描述一致；`templates/` 四檔清單與 `README.md`、`AGENTS.md`、
+  投影片三處一致；全 repo md 相對連結無懸空。
   留給 owner（本輪查到、但不宜由審查逕自決定）：`slides/03-production-quality.md`
   逐頁講者備忘加總 19 分，該單元標的 22 分（line 20「15:16 開講」到 line 177
   「15:38 實作」），差 3 分沒有落在任何一頁。此落差在本 PR 之前就存在（本 PR 未增減
   頁數、也未改動其他頁的分鐘數），要補在開場還是攤進各頁是教學安排，留給講者決定。
+  另一項（第 9 輪查到）：本檔開頭狀態表寫三份 deck「13／18／12 張」，但 2026-07-15
+  的日誌寫「13／17／12」「單元二 12→17 張」。依 `headingDivider: 2` 實際計算（H1 一
+  張＋H2 十七張，已排除程式碼區塊內的 `#` 註解行）單元二為 18 張，狀態表才是對的、
+  舊日誌漏算了標題頁。這兩行在本 PR 之前就存在、本 PR 也未動 `slides/02-llm-quality.md`，
+  屬歷史記述誤差，是否訂正留給 owner。

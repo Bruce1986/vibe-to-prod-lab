@@ -3,7 +3,7 @@
 課程「從 Vibe Coding 到 Production Architecture」下午場的帶回禮：
 貼進你的 PR template，或直接給 AI 當自我檢查清單。
 
-> 這是 `templates/coding-review-principles.md` 的可勾選版，**不是逐項一對一**。
+> 這是本課程 repo 的 `templates/coding-review-principles.md` 可勾選版，**不是逐項一對一**。
 > 14 項的組成：8 項出自 Review 八條（第 5 條拆成「幻覺 API」與「更嚴標準」兩項；
 > 第 7 條「對事不對人」是 review 態度，沒有可勾選的對應項）、4 項出自撰寫十條第 1、
 > 4、9 條（第 4 條在作者與 reviewer 兩區各一項；reviewer 區那一項與 Review 第 5 條的

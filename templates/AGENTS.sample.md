@@ -53,9 +53,10 @@ docs/       <文件>
 
 ## Code Review 原則（Review）
 
-<貼上本課程 `templates/coding-review-principles.md` 的「簡易 Code Review 原則」八條
-（可勾選版見 `templates/pr-checklist.md`：那份依作者／reviewer 重新分組，另補進
-撰寫十條的第 1、4、9 條與兩項課程特有檢查，共 14 項比這八條多，不是一對一對應）。
+<貼上本課程 `templates/coding-review-principles.md` 的「簡易 Code Review 原則」八條。
+可勾選版見 `templates/pr-checklist.md`：那份依作者／reviewer 重新分組，八條攤成
+8 項，另補進撰寫十條的第 1、4、9 條共 4 項（第 4 條在作者／reviewer 兩區各一項）
+與兩項課程特有檢查，合計 14 項，比這八條多，不是一對一對應。
 重點：AI 生成的 code 用更嚴的標準審。>
 
 ## 語言（Language）
