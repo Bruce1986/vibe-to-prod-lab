@@ -38,9 +38,14 @@ def test_lint_test_job_installs_node():
     assert len(lint_test) == 2, "找不到 lint-test job——這條測試已對不上 quality.yml"
     # 只看到下一個 job 為止，免得誤採 golden-eval 的 setup-node
     body = re.split(r"\n  \w[\w-]*:\n", lint_test[1])[0]
-    assert "actions/setup-node" in body, (
-        "lint-test 沒有 actions/setup-node：tests/test_eval_summary.py 與 "
-        "tests/test_local_eval_asserts.py 會被整批靜默跳過，pytest 仍會全綠"
+    # 比對 `uses:` 欄位而不是整段文字裡「有沒有出現這串字」：純子串比對會被
+    # step 名稱或註解裡的同一串字騙過去。實測把 setup-node 換成 apt-get 裝 node、
+    # 但 step 取名為「安裝 Node（改用 apt，不再用 actions/setup-node）」時，
+    # 子串版本會誤判通過（1 passed），而這個版本會正確轉紅。
+    assert re.search(r"uses:\s*actions/setup-node(?:@|\s|$)", body), (
+        "lint-test 沒有以 `uses: actions/setup-node` 裝 node："
+        "tests/test_eval_summary.py 與 tests/test_local_eval_asserts.py "
+        "會被整批靜默跳過，pytest 仍會全綠"
     )
     versions = set(re.findall(r"node-version:\s*\"?(\d+)\"?", workflow))
     assert len(versions) == 1, f"各軌的 node 版本應該一致，目前有 {sorted(versions)}"

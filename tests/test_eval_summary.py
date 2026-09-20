@@ -205,10 +205,15 @@ def test_partial_no_answer_is_excluded_from_the_score(tmp_path):
 def test_multi_provider_run_does_not_distort_the_numbers(tmp_path):
     """一列＝一題 ×一個 provider，所以列數不等於題數。
 
-    實測過（promptfoo 0.121.19，同一份 tests.small.yaml 配兩個 provider）：
-    `results.results` 會有 6 列、`testIdx` 是 [0,0,1,1,2,2]、`provider.label`
-    交替。下面照那個形狀由真實 fixture 衍生出兩個 provider 的版本，確認摘要
-    不會把 6 列講成「6 題」，也不會把歷史對照的 3/3 改寫成 6/6。
+    下面這份 2-provider 輸入是**由真實 fixture 衍生**的（把每一列複製成兩個
+    `provider.label`），不是 promptfoo 實跑的留底——repo 裡沒有 2-provider 的
+    原始 `output.json`。衍生的形狀（6 列、`testIdx` [0,0,1,1,2,2]）與 promptfoo
+    「一列＝一題 ×一個 provider」的文件化行為一致，但**這一點本身未經本 repo
+    留證**，所以不在這裡寫成「實測過」（同 AGENTS.md「未查證的推測不進永久
+    紀錄」）。所幸 `countDistinct` 對列的排列順序不敏感，真實順序若是
+    [0,1,2,0,1,2] 結果相同。
+
+    要驗的是：摘要不會把 6 列講成「6 題」，也不會把歷史對照的 3/3 改寫成 6/6。
     """
     data = json.loads(ANSWERED.read_text(encoding="utf-8"))
     rows = data["results"]["results"]
@@ -226,6 +231,42 @@ def test_multi_provider_run_does_not_distort_the_numbers(tmp_path):
     assert "曾以這 3 題拿 3/3" in summary, "歷史對照的數字是固定事實，不能跟著本次題數變"
     assert "6 題拿" not in summary
     assert "本次成績：6/6" in summary
+
+
+def test_missing_testidx_is_reported_as_unknown_not_as_a_question_count(tmp_path):
+    """`testIdx` 缺席時不可以拿列數冒充題數。
+
+    `countDistinct` 對缺鍵的列用 `#index` 當 key，於是每一列各成一組。單一
+    provider 時這剛好等於題數、看不出問題；**2 個 provider 就會把 3 題 ×2 的
+    6 列報成「6 題」**，而且因為 6 ≠ BASELINE_QUESTIONS，連帶把對照組那段改印
+    成「本次是 6 題」——一個憑空捏造的量測，講得跟真的一樣。那正是這支摘要
+    存在的理由（不要把沒量到的東西講得很篤定）換了個觸發點。
+
+    目前兩份真實 fixture 的每一列都有 `testIdx`，所以這是防禦性守門：沒有這條
+    測試，把 `complete` 那套拿掉也不會有任何東西變紅。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    doubled = []
+    for row in data["results"]["results"]:
+        for label in ("A", "B"):
+            clone = json.loads(json.dumps(row))
+            clone.pop("testIdx", None)
+            clone["provider"] = {"id": "file://mock_provider.js", "label": label}
+            doubled.append(clone)
+    data["results"]["results"] = doubled
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+
+    # 只禁「把 6 當成本次題數」的那兩種說法。**不能寫成 `"6 題" not in summary`**：
+    # 「（主線 golden 軌為 6 題）」是寫死的固定事實、永遠都在，那樣寫會讓這條
+    # 測試變成恆紅（實測就是這樣紅的），而且紅的理由跟它要守的事無關。
+    assert "的 6 題小樣卷" not in summary, f"把 6 列講成 6 題了：\n{summary}"
+    assert "無法回推題數" in summary, f"沒有講明題數回推不出來：\n{summary}"
+    assert "共 6 筆結果" in summary, "列數是實際數得出來的，仍應照報"
+    assert "本次是 6 題" not in summary, "對照組那段也不能拿列數冒充題數"
+    # 成績是逐列算的，不受題數未知影響，仍要照常印出來。
+    assert "本次成績：6/6" in summary, f"成績不該因為題數未知而消失：\n{summary}"
 
 
 def test_baseline_comparison_is_dropped_when_the_question_count_changes(tmp_path):

@@ -78,14 +78,28 @@ function answered(row) {
   return output !== undefined && output !== null;
 }
 
-/** promptfoo 的一列＝一題 ×一個 provider，所以列數不等於題數。 */
+/** promptfoo 的一列＝一題 ×一個 provider，所以列數不等於題數。
+ *
+ * 回傳 `{ count, complete }`。`complete === false` 代表**有列缺這個鍵**，此時
+ * `count` 只是「每列各算一個」的退路，**不是量測值，不可拿去對外宣稱**：缺
+ * `testIdx` 又有 2 個 provider 時，3 題 ×2 會被算成 6，摘要就會把 6 筆結果報成
+ * 「6 題」——正是本檔存在的理由（把沒量到的東西講得很篤定）換了個觸發點。
+ * 呼叫端必須看 `complete`，不完整時改口說「無法回推」而不是給一個數字。
+ * （目前兩份真實 fixture 的每一列都有 `testIdx`，所以這是防禦性處理。）
+ */
 function countDistinct(rows, pick) {
   const seen = new Set();
+  let missing = 0;
   rows.forEach((row, index) => {
     const key = pick(row);
-    seen.add(key === undefined || key === null ? `#${index}` : String(key));
+    if (key === undefined || key === null) {
+      missing += 1;
+      seen.add(`#${index}`);
+    } else {
+      seen.add(String(key));
+    }
   });
-  return seen.size;
+  return { count: seen.size, complete: missing === 0 };
 }
 
 function summarize(path) {
@@ -107,12 +121,16 @@ function summarize(path) {
   const { rows, stats } = parsed;
   const answeredRows = rows.filter(answered);
   const errorCount = Number.isFinite(Number(stats.errors)) ? Number(stats.errors) : 0;
-  const questions = countDistinct(rows, (row) => row.testIdx);
-  const providers = countDistinct(rows, (row) => {
+  const questionCount = countDistinct(rows, (row) => row.testIdx);
+  const providerCount = countDistinct(rows, (row) => {
     const provider = row.provider;
     if (!provider || typeof provider !== 'object') return provider;
     return provider.label || provider.id;
   });
+  const questions = questionCount.count;
+  const questionsKnown = questionCount.complete;
+  const providers = providerCount.count;
+  const providersKnown = providerCount.complete;
 
   if (answeredRows.length === 0) {
     lines.push('### ⚠️ eval-local 未完成——執行期錯誤，不是模型品質訊號');
@@ -143,12 +161,28 @@ function summarize(path) {
   }
   lines.push('- 零 API key、零外部帳號、零費用——模型就跑在 runner 上');
   lines.push('- 這是 **monitor** 不是 gate：紅色是資訊，不擋部署');
-  const scope =
-    providers > 1
-      ? `${questions} 題小樣卷 ×${providers} 個 provider，共 ${rows.length} 筆結果`
-      : `${questions} 題小樣卷`;
-  lines.push(`- 考的是 golden 題庫的 ${scope}（主線 golden 軌為 6 題）`);
-  if (questions === BASELINE_QUESTIONS) {
+  // 題數／provider 數只要有一項回推不出來，就不要給數字——寧可說「不知道」，
+  // 也不要把列數當題數講得很篤定（見 countDistinct 的註解）。
+  const providerScope = providersKnown
+    ? providers > 1
+      ? ` ×${providers} 個 provider`
+      : ''
+    : ' ×未知數量的 provider';
+  const multi = !providersKnown || providers > 1;
+  if (questionsKnown) {
+    const scope = `${questions} 題小樣卷${providerScope}${
+      multi ? `，共 ${rows.length} 筆結果` : ''
+    }`;
+    lines.push(`- 考的是 golden 題庫的 ${scope}（主線 golden 軌為 6 題）`);
+  } else {
+    lines.push(
+      `- 考的是 golden 題庫的小樣卷${providerScope}，共 ${rows.length} 筆結果；` +
+        'promptfoo 這次的結果列沒有 testIdx，**無法回推題數**（主線 golden 軌為 6 題）',
+    );
+  }
+  if (!questionsKnown) {
+    lines.push('- 沒有可比的對照組：本次回推不出題數，無法判斷與歷史的 3 題是否同一份考卷');
+  } else if (questions === BASELINE_QUESTIONS) {
     lines.push('- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3（2026-07-15 實測）');
     lines.push('  （但書：3/3 那次跑的是舊版單行斷言，本次跑的是現在的防禦性斷言，');
     lines.push('  兩次的擷取邏輯不同；而且 3 題的樣本小到單題翻面就是 33 個百分點。');
