@@ -42,7 +42,18 @@ def test_lint_test_job_installs_node():
     # step 名稱或註解裡的同一串字騙過去。實測把 setup-node 換成 apt-get 裝 node、
     # 但 step 取名為「安裝 Node（改用 apt，不再用 actions/setup-node）」時，
     # 子串版本會誤判通過（1 passed），而這個版本會正確轉紅。
-    assert re.search(r"uses:\s*actions/setup-node(?:@|\s|$)", body), (
+    #
+    # **先丟掉整行註解再比對**：只換成 `uses:` 正則是不夠的——拿掉 action 時最
+    # 自然的寫法就是把原本那行 `uses: actions/setup-node@v4` 註解掉留著，那樣
+    # 正則照樣命中、照樣假綠（實測：改 apt ＋ 註解保留整行 → 1 passed）。
+    # **引號要放行**：`uses: "actions/setup-node@v4"` 與單引號版都是合法 YAML，
+    # 不加引號分支會把它們判成紅（實測兩種各 1 failed），那是舊子串版本本來就過的。
+    # 已知限制：本地 composite wrapper（`uses: ./.github/actions/setup-node`）
+    # 仍抓不到——要正確處理得真的解析 YAML，而 PyYAML 不在 requirements.txt 裡。
+    lines = [ln for ln in body.splitlines() if not ln.lstrip().startswith("#")]
+    assert re.search(
+        r"""uses:\s*["']?actions/setup-node(?:[@"']|\s|$)""", "\n".join(lines)
+    ), (
         "lint-test 沒有以 `uses: actions/setup-node` 裝 node："
         "tests/test_eval_summary.py 與 tests/test_local_eval_asserts.py "
         "會被整批靜默跳過，pytest 仍會全綠"

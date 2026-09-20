@@ -69,6 +69,19 @@ CASES = [
     (1, "答案前的散文有未配對的半形引號", f'顧客說"加跳跳糖\n{NO_HALLUCINATION}', True),
     (1, "先吐草稿才給正式答案", f'草稿 {{"a":1}} 正式答案 {HALLUCINATED}', False),
     (1, "輸出被截斷", HALLUCINATED[:40], False),
+    # 跳脫處理也要在這裡考一次（理由同上面那段註解）：實測只砍第 2、3 份掃描器的
+    # 跳脫邏輯、留第 1 份完好時，32 條 test_assertion_verdict 一條都不紅，唯一轉紅的
+    # 是 test_three_scanners_stay_byte_identical——而那條只保證三份逐字一致、
+    # 不保證邏輯本身對。補這一筆之後第 2 份自己也會紅。
+    (
+        1,
+        "跳脫引號後緊跟左花括號",
+        (
+            '{"notes":"fake \\" { not json","status":"ok",'
+            '"items":[{"name":"珍珠奶茶","toppings":[],"sweetness":100}]}'
+        ),
+        True,
+    ),
     # --- 第 3 題：資訊不足要反問 ---
     (2, "正確反問", NEEDS_CLARIFICATION, True),
     (2, "覆誦範例後才反問", f"範例：{PROMPT_EXAMPLE}\n我的回答：{NEEDS_CLARIFICATION}", True),
@@ -77,6 +90,16 @@ CASES = [
     (2, "答案前的散文有未配對的半形引號", f'顧客說"來點好喝的\n{NEEDS_CLARIFICATION}', True),
     (2, "先吐草稿才給正式答案", f'草稿 {{"a":1}} 正式答案 {NEEDS_CLARIFICATION}', True),
     (2, "輸出被截斷", NEEDS_CLARIFICATION[:25], False),
+    # 第 3 份掃描器的跳脫處理（理由同第 2 題那筆）。
+    (
+        2,
+        "跳脫引號後緊跟左花括號",
+        (
+            '{"notes":"fake \\" { not json","status":"need_clarification",'
+            '"question":"想喝什麼基底？"}'
+        ),
+        True,
+    ),
 ]
 
 

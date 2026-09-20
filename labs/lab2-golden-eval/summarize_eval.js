@@ -168,7 +168,11 @@ function summarize(path) {
       ? ` ×${providers} 個 provider`
       : ''
     : ' ×未知數量的 provider';
-  const multi = !providersKnown || providers > 1;
+  // 判準是「列數與題數對不上就要把列數講出來」，不是「有沒有多個 provider」。
+  // 單一 provider 跑 `--repeat 2` 時 3 題會產生 6 列，舊判準（providers > 1）
+  // 把列數整個藏起來，畫面變成「3 題小樣卷」＋「本次成績 6/6」——讀者看到的是
+  // 一份 3 題考卷拿了 6 分，正是本檔要防的那種誤讀的鏡像。
+  const multi = !providersKnown || providers > 1 || rows.length !== questions;
   if (questionsKnown) {
     const scope = `${questions} 題小樣卷${providerScope}${
       multi ? `，共 ${rows.length} 筆結果` : ''

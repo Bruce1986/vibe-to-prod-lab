@@ -209,8 +209,10 @@ def test_multi_provider_run_does_not_distort_the_numbers(tmp_path):
     `provider.label`），不是 promptfoo 實跑的留底——repo 裡沒有 2-provider 的
     原始 `output.json`。衍生的形狀（6 列、`testIdx` [0,0,1,1,2,2]）與 promptfoo
     「一列＝一題 ×一個 provider」的文件化行為一致，但**這一點本身未經本 repo
-    留證**，所以不在這裡寫成「實測過」（同 AGENTS.md「未查證的推測不進永久
-    紀錄」）。所幸 `countDistinct` 對列的排列順序不敏感，真實順序若是
+    留證**，所以不在這裡寫成「實測過」——沒查證過的東西不寫進永久紀錄。
+    （原本這裡引「AGENTS.md『未查證的推測不進永久紀錄』」，但本 repo 的
+    AGENTS.md 沒有這一條，那是別處的規則；寫下一個查不到的出處，本身就是這
+    句話要防的事。）所幸 `countDistinct` 對列的排列順序不敏感，真實順序若是
     [0,1,2,0,1,2] 結果相同。
 
     要驗的是：摘要不會把 6 列講成「6 題」，也不會把歷史對照的 3/3 改寫成 6/6。
@@ -261,12 +263,45 @@ def test_missing_testidx_is_reported_as_unknown_not_as_a_question_count(tmp_path
     # 只禁「把 6 當成本次題數」的那兩種說法。**不能寫成 `"6 題" not in summary`**：
     # 「（主線 golden 軌為 6 題）」是寫死的固定事實、永遠都在，那樣寫會讓這條
     # 測試變成恆紅（實測就是這樣紅的），而且紅的理由跟它要守的事無關。
-    assert "的 6 題小樣卷" not in summary, f"把 6 列講成 6 題了：\n{summary}"
+    # **用語意斷言而不是挑幾個字串比對**：字串版只擋得住「我剛好想到的那幾種
+    # 措辭」。實測把對照組那行改寫成「歷史考的是 3 題，這次考了 ${questions} 題」，
+    # 字串版 81 passed 全綠，而摘要兩行內自相矛盾（上一行說無法回推、下一行報 6 題）。
+    # 改成：摘要裡出現的每一個「N 題」，都不可以等於列數——唯一的例外是寫死的
+    # 「主線 golden 軌為 6 題」，它是固定事實、與本次無關，所以先剔掉再檢查。
     assert "無法回推題數" in summary, f"沒有講明題數回推不出來：\n{summary}"
     assert "共 6 筆結果" in summary, "列數是實際數得出來的，仍應照報"
-    assert "本次是 6 題" not in summary, "對照組那段也不能拿列數冒充題數"
+    stripped = summary.replace("（主線 golden 軌為 6 題）", "")
+    claimed = [int(n) for n in re.findall(r"(\d+) 題", stripped)]
+    assert len(doubled) not in claimed, (
+        f"題數回推不出來時，摘要不可以出現等於列數（{len(doubled)}）的題數宣稱，"
+        f"實得 {claimed}：\n{summary}"
+    )
     # 成績是逐列算的，不受題數未知影響，仍要照常印出來。
     assert "本次成績：6/6" in summary, f"成績不該因為題數未知而消失：\n{summary}"
+
+
+def test_missing_provider_is_reported_as_unknown_count(tmp_path):
+    """`provider` 缺席時同樣不可以拿列數冒充 provider 數。
+
+    `providers` 走的是跟 `questions` 一模一樣的 `countDistinct`，所以有一模一樣
+    的退路問題。上一輪只替 `questions` 補了測試，`providersKnown` 那一半**零
+    覆蓋**——實測把它整套拿掉、退回舊的 `providers > 1`，全套 81 passed 全綠。
+    同一個 commit 對兩半採不同的舉證標準，這條把它補齊。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    for row in data["results"]["results"]:
+        row.pop("provider", None)
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+
+    assert "×未知數量的 provider" in summary, (
+        f"provider 回推不出來時要講明，不能拿每列各算一個的退路當數字：\n{summary}"
+    )
+    rows = len(data["results"]["results"])
+    assert f"×{rows} 個 provider" not in summary, (
+        f"把 {rows} 列各算成一個 provider 了：\n{summary}"
+    )
 
 
 def test_baseline_comparison_is_dropped_when_the_question_count_changes(tmp_path):

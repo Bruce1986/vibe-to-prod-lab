@@ -10,7 +10,7 @@
 | Skills ×5（兩工具通用） | ✅ | /course-help /lab1 /lab2 /lab3 /local-eval |
 | Workflows ×3 | ✅ | quality／eval-local／slides |
 | 投影片 ×3（Marp） | ✅ v2+ | 13／18／12 張；含講者備忘＋時間配額；案例①②已入 deck 2；待 Bruce 彩排微調 |
-| 案例集 docs/case-studies.md | ✅ 定稿 | 六案（07-16 owner 核准；「錯的 base」案依 owner 決策移除）；對照表對齊官方課綱 |
+| 案例集 docs/case-studies.md | ⏳ 待 owner 確認 | 六案；對照表對齊官方課綱。⚠️ 本列原記「✅ 定稿（07-16 owner 核准）」，但該說法與檔案內文的「草稿，待講師逐案核准」出自**同一顆 commit `a008d2b`**（建檔那顆），兩者不是獨立佐證，無法由 repo 內部判定——詳見該檔開頭與 2026-09-21 條目⑮ |
 | Template flag／Pages 設定 | ✅ | 2026-07-15 API 設定；Pages HTTP 200 |
 | 加分關 eval-local（Ollama） | ✅ 已換引擎 | GitHub Models 7/30 退役→改本地小模型；PoC 1/3、約 3 分鐘、零 token |
 | 課前實測清單 | ⏳ | docs/teacher-setup.md |
@@ -155,8 +155,11 @@
   ⑧ **把本次題數內插進固定的歷史事實**：「曾以這 ${total} 題拿 3/3」
   「${total} 題的樣本小到單題翻面就是 33 個百分點」——3/3 與 33 都是寫死的，
   只有分母會動，題數一變就印出捏造的量測。且 promptfoo 的**列數＝題數 ×
-  provider 數**（實測：同一份 tests.small.yaml 配兩個 provider ⇒ 6 列、
-  testIdx 為 [0,0,1,1,2,2]）。歷史對照句全部寫死，題數改由 testIdx 去重算，
+  provider 數**（⚠️ 2026-09-21 更正：原本這裡寫「實測：同一份 tests.small.yaml
+  配兩個 provider ⇒ 6 列、testIdx 為 [0,0,1,1,2,2]」，但 repo 裡沒有 2-provider
+  的原始 output.json，當時的驗證是由既有 fixture 衍生的、不是實跑留底。
+  「列數＝題數 × provider 數」與 promptfoo 的文件化行為一致，但本 repo 未留證，
+  故撤下「實測」二字）。歷史對照句全部寫死，題數改由 testIdx 去重算，
   題數不是 3 時直接說「沒有可比的對照組」。
   ⑨ 檔頭實測記錄裡「整份檔案裡沒有任何 error 欄位」**是錯的**：三筆都有
   `error`，內容是斷言訊息，跟模型真的答錯時長得一樣——那才是「找 error 列」
@@ -172,3 +175,37 @@
 - 本輪突變六個（分母含沒作答／題數內插回對照句／不分 errors 同一句話／
   題數用列數不去重／拿掉 setup-node／兩軌 node 版本不一致）全部致紅；
   pytest 78 綠 1 skip、ruff 乾淨。
+
+### 2026-09-21（排程班第 8／9 輪：把「沒量到的東西」從摘要與紀錄裡清掉）
+
+- 第 8 輪（三 lens：迴歸審 720f5d5／測試品質突變／不看 diff 全文通讀）：
+  ⑬ `summarize_eval.js` 的 `countDistinct()` 對缺鍵的列用 `#index` 當 key，
+  每列各成一組。單一 provider 時剛好等於題數、看不出問題；**2 個 provider
+  就把 3 題 ×2 的 6 列報成「6 題」**，並因 6 ≠ 3 連帶把對照組改印「本次是
+  6 題」——一個憑空捏造的量測，講得跟真的一樣，正是這支摘要存在的理由換了
+  個觸發點。改成回傳 `{count, complete}`，不完整時改口「無法回推題數」並
+  停掉對照組；列數（實際數得出來）照報、成績（逐列算）不受影響。
+  ⑭ `test_ci_toolchain` 的 `"actions/setup-node" in body` 純子串比對會被
+  step 名稱騙過（reviewer 實測誤觸：step 取名含該字串時假綠）。改比對
+  `uses:` 欄位。
+- 第 9 輪（Opus 對抗性 tracer，專打第 8 輪自己的修正）：
+  ⑮ 🔴 **撤回第 8 輪對 `docs/case-studies.md` 的「定稿」判定**。第 8 輪宣稱
+  「repo 內部證據足以判定、不再需要 owner 裁決」，依據是 commit `a008d2b`
+  的標題與 `WORKLOG.md` 的「✅ 定稿」。但 `a008d2b` 正是**建檔那一顆**，且
+  它**同一次寫入**同時寫下「定稿（owner 核准）」與內文的「草稿，待講師逐案
+  核准」——兩份「互相佐證」是同一個作者、同一顆 commit，不是獨立來源。
+  已退回「待 owner 確認」並如實記下兩種說法並存。
+  ⑯ `providersKnown` 整套零覆蓋（拿掉它 81 passed 全綠），補測試。
+  ⑰ 第 8 輪撤掉的那句「實測」只改了 docstring，同一句話在本檔還活著（見
+  ⑧ 的更正）。⑱ 第 8 輪補的出處「AGENTS.md『未查證的推測不進永久紀錄』」
+  在本 repo 的 AGENTS.md 裡查無此條——寫下查不到的出處，正是那句話要防的事。
+  ⑲ 跳脫引號案例只餵第 1 題，另外兩份掃描器仍零覆蓋，各補一筆。
+  ⑳ 新測試五條斷言有三條空轉（換個措辭講出捏造的題數仍全綠），改成語意斷言。
+- 本輪突變全部致紅（缺 testIdx 冒充題數／缺 provider 冒充 provider 數／
+  註解掉 setup-node 的假綠／引號 YAML 的假紅／三份掃描器的跳脫邏輯）；
+  pytest 84 綠 1 skip、ruff 乾淨。
+- ⚠️ 仍待 owner：`docs/case-studies.md` 的定稿與否；`docs/teacher-setup.md`
+  「課前一週實測清單（8/11 前）」下的兩條未勾待辦（2026-08-16 加入，晚於
+  自標期限、早於開課日 08-18 兩天，全 repo 查無「下學期」字樣，證據傾向
+  過期遺忘但非決定性）；`.claude/skills/local-eval/SKILL.md` 的「只改了
+  一行」與本 repo 其餘五處的誠實版本牴觸（owner 第 3 輪已裁示本次不動）。
