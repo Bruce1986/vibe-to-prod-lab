@@ -38,6 +38,17 @@ CASES = [
     (0, "先吐草稿才給正式答案", f'草稿 {{"a":1}} 正式答案 {OK_ORDER}', True),
     (0, "答案前的散文有未配對的半形引號", f'顧客說"來點好喝的\n{OK_ORDER}', True),
     (0, "字串內含跳脫引號", '{"notes":"他說\\"半糖\\"","items":[{"sweetness":50}]}', True),
+    # ⚠️ 上面那筆**測不到掃描器的跳脫處理**，別被名字騙了：把三處掃描器的
+    # `if (esc) esc = false; else if (c === '\\') esc = true;` 整段砍成只剩
+    # `if (c === '"') inStr = false;`，它照樣回 true（兩個跳脫引號一開一關剛好
+    # 抵銷）。實測砍掉跳脫後這一整份 CASES 仍全數通過——也就是跳脫邏輯的正確性
+    # 當時只靠 test_three_scanners_stay_byte_identical 間接守著，而那條只保證
+    # 三份抄本一致、不保證邏輯本身對。
+    # 下面兩筆才會分岔（原版 True／砍掉跳脫 False）：關鍵是跳脫引號**後面緊跟著
+    # 會被誤判為結構字元的東西**（`{` 會讓 depth 多加一層、`}` 會提早收掉候選），
+    # 跳脫沒被認出來時 inStr 會在錯的位置翻面。
+    (0, "跳脫引號後緊跟左花括號", '{"notes":"fake \\" { not json","items":[{"sweetness":50}]}', True),
+    (0, "跳脫引號後緊跟右花括號", '{"notes":"a\\"}","items":[{"sweetness":50}]}', True),
     (0, "字串內含未配對花括號", '{"notes":"符號 {","items":[{"sweetness":50}]}', True),
     (0, "巢狀物件", '{"a":{"b":{"c":1}},"items":[{"sweetness":50}]}', True),
     # 以下是真的答錯／讀不出訂單，必須維持 Fail
