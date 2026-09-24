@@ -58,8 +58,33 @@ def test_lint_test_job_installs_node():
         "tests/test_eval_summary.py 與 tests/test_local_eval_asserts.py "
         "會被整批靜默跳過，pytest 仍會全綠"
     )
-    versions = set(re.findall(r"node-version:\s*\"?(\d+)\"?", workflow))
-    assert len(versions) == 1, f"各軌的 node 版本應該一致，目前有 {sorted(versions)}"
+
+def test_all_workflows_pin_the_same_node_version():
+    """「各軌一致」就要真的掃過各軌，不能只掃 quality.yml。
+
+    這條原本併在上面那個函式裡，`re.findall` 的對象是 quality.yml 的內文，
+    斷言訊息卻寫「各軌的 node 版本應該一致」——實際只比對了 quality.yml 內部
+    lint-test 與 golden-eval 兩個 job。`eval-local.yml`（學員按 `/local-eval`
+    走的那一軌）自己也釘 node 版本，漂移完全沒有人管：實測把 eval-local.yml
+    改成 `node-version: 20`、其餘不動，整份 pytest 仍全綠。
+
+    改成掃 `.github/workflows/` 底下**所有**釘了 node-version 的檔案，新增
+    workflow 會自動納入，不必回來改這條。突變實證：eval-local.yml 改 20 →
+    紅；slides.yml 改 18 → 紅；把 glob 指到不存在的目錄 → 紅（即這條不是
+    恆真，掃不到東西也會講）。
+    """
+    per_file = {}
+    for path in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml")):
+        found = re.findall(
+            r"node-version:\s*[\"']?(\d+)", path.read_text(encoding="utf-8")
+        )
+        if found:
+            per_file[path.name] = sorted(set(found))
+    assert per_file, "沒有任何 workflow 釘 node-version——這條測試已對不上 repo"
+    versions = {v for vs in per_file.values() for v in vs}
+    assert len(versions) == 1, (
+        f"各軌的 node 版本應該一致，目前有 {sorted(versions)}：{per_file}"
+    )
 
 
 @pytest.mark.skipif(not IN_CI, reason="本機允許沒有 node（那兩份會整批跳過）；CI 上不允許")

@@ -209,3 +209,33 @@
   自標期限、早於開課日 08-18 兩天，全 repo 查無「下學期」字樣，證據傾向
   過期遺忘但非決定性）；`.claude/skills/local-eval/SKILL.md` 的「只改了
   一行」與本 repo 其餘五處的誠實版本牴觸（owner 第 3 輪已裁示本次不動）。
+
+### 2026-09-24（排程班第 10 輪：clean pass 確認，＋兩條學員路徑的缺口）
+
+- 本輪的指定任務是 clean pass 確認，不是再開新改動。對第 9 輪的八項宣稱逐一
+  做突變複驗，**七項完全成立、無迴歸**：`uses:` 正則（整行註解→紅；雙引號／
+  單引號／無空白／改縮排／行內註解→全綠，即假紅已關）、`providersKnown` 新
+  守門（退回 `providers>1` → 1 failed）、`multi` 改用 `rows.length !== questions`
+  （單 provider＋repeat 2 會印出「共 6 筆結果」；單 provider 單次仍不多印，
+  沒有新假紅）、三份掃描器的跳脫案例（只砍第 1／第 2／第 3 份各自都紅）、
+  WORKLOG 與 docstring 的「實測」字樣已撤且無第三處殘留、AGENTS.md 出處已改
+  成不指名、`docs/case-studies.md` 與本檔狀態表的措辭一致且全 repo 無第三處
+  還寫「定稿」。第 8 輪對 `a008d2b` 的誤判也再次複驗屬實（`a008d2b~1` 查無此
+  檔＝建檔那顆，同一顆 commit 同時寫下「定稿」與「草稿」）。
+- ㉑ **「各軌的 node 版本應該一致」只掃了 quality.yml**。那句斷言訊息寫「各軌」，
+  但 `re.findall` 的對象是 quality.yml 的內文，實際只比對它內部 lint-test 與
+  golden-eval 兩個 job。`eval-local.yml`（學員按 `/local-eval` 走的那一軌）與
+  `slides.yml` 各自也釘 node 版本，漂移沒有人管——突變實證：把 eval-local.yml
+  改成 `node-version: 20`、其餘不動，整份 pytest 仍全綠。已抽成獨立的
+  `test_all_workflows_pin_the_same_node_version`，掃 `.github/workflows/` 底下
+  所有釘了 node-version 的檔案（新增 workflow 自動納入）。回驗：eval-local 改
+  20 → 紅、slides 改 18 → 紅、glob 指到不存在的目錄 → 紅（非恆真），原本那條
+  `test_lint_test_job_installs_node` 把 `uses:` 整行註解掉仍 → 紅（未退步）。
+- ㉒ `docs/02-llm-quality.md` 對學員承諾的「全程約 3 分鐘」沒有時點。出處是
+  2026-07-16 的 PoC 分支（`docs/teacher-setup.md:30` 與本檔 07-16 條目都有標
+  日期，只有學員讀的那份沒標），而該數字之後 workflow 又經多輪加固，現在四個
+  步驟的 timeout 預算合計 28 分鐘、job 層 35 分鐘，重構後未再計時。已在該處補
+  上量測時點與「等第一次正式跑完再回來訂正」。
+- pytest 85 綠（新增 1）1 skip、ruff 乾淨。
+- ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
+  也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。

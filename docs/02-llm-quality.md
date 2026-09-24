@@ -58,7 +58,10 @@ prompt 也是 code：改 prompt → 跑 golden set → 看 diff → 紅了不上
 repo 內建加分關（`/local-eval`）：eval-local workflow 在 GitHub Actions 的
 runner 上安裝 Ollama、拉 qwen2.5:1.5b，對同一份 golden 題庫裡的 3 題小樣卷
 （`tests.small.yaml`；主線 golden 軌 `tests.yaml` 是 6 題）推論——
-**零 API key、零外部帳號、零費用**，全程約 3 分鐘。它是 monitor 不是
+**零 API key、零外部帳號、零費用**，全程約 3 分鐘（這個數字量測於
+2026-07-16 的 PoC 分支，之後 workflow 又經過多輪加固——現在四個步驟各自的
+timeout 預算合計 28 分鐘、job 層 35 分鐘——重構後沒有再計時過，等第一次正式
+跑完再回來訂正）。它是 monitor 不是
 gate：小模型上當幻覺誘餌、對模糊輸入瞎猜都是預期內的「資訊」。
 
 > 存續風險的活教材：本關最初以 **GitHub Models**（`GITHUB_TOKEN`＋
