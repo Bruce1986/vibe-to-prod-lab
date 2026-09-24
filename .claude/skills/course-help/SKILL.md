@@ -11,9 +11,9 @@ description: 介紹本課程 repo 的地圖、三個 lab 與常用指令。學�
    LLM 全部用預錄 fixtures 回放、零 API key。
 2. 三個 lab 的位置與目標（`labs/lab1-testing`、`labs/lab2-golden-eval`、
    `labs/lab3-production`），建議照順序做：`/lab1` → `/lab2` → `/lab3`，
-   加分關 `/live-eval`。
+   加分關 `/local-eval`。
 3. 常用指令：`python -m pytest -q`、`ruff check app tests labs`、
-   promptfoo golden eval（見 lab2 README）、`gh workflow run eval-live.yml`。
+   promptfoo golden eval（見 lab2 README）、`gh workflow run eval-local.yml`。
 4. 若學員環境還沒建好，先帶他們完成 `labs/lab1-testing/README.md` 的第 0 步。
 
 回覆保持在半頁以內，重點是讓學員知道「下一步做什麼」。

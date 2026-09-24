@@ -9,6 +9,7 @@
 2. 幫學員加 golden case 時，三個地方要一致：`fixtures/llm_responses.json`、
    本資料夾 `tests.yaml`、（建議）`tests/golden_cases.json`。
 3. 改完 prompt 或測資後，主動建議跑 golden eval（本機 promptfoo 或 push 看 CI）。
-4. `promptfooconfig.live.yaml` 只在 GitHub Actions 跑（需要 GITHUB_TOKEN 與
-   models: read），不要嘗試在本機直接執行它。
+4. `promptfooconfig.local.yaml`（加分關）預設在 GitHub Actions 跑
+   （eval-local workflow 會自行安裝 Ollama）；本機要跑的前提是已裝 Ollama
+   並 `ollama pull qwen2.5:1.5b`。它是 monitor 不是 gate，紅色屬預期資訊。
 5. 回覆使用正體中文（台灣用語）。

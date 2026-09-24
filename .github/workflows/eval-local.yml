@@ -1,0 +1,129 @@
+# 加分關（/local-eval）：零 token、零帳號、零費用的真 LLM 評測——
+# 在 CI runner 上啟動本地小模型（Ollama qwen2.5:1.5b），考 golden 題庫裡的
+# 3 題小樣卷（tests.small.yaml；主線 golden 軌 tests.yaml 為 6 題）。
+# 這是 monitor 不是 gate：紅色是資訊（小模型會上當幻覺誘餌、會瞎猜），
+# 不會擋任何部署。手動觸發（workflow_dispatch）。
+#
+# 歷史註記：本加分關原以 GitHub Models 免費推論實作（GITHUB_TOKEN＋
+# models: read），該服務於 2026-07-30 全面退役；改用本地模型後不再依賴
+# 任何外部推論 API 或帳號——golden 題目與 prompt 原封不動搬過來、斷言要驗的
+# 東西也沒變（寫法改成防禦性以吃下小模型的殘缺輸出），換掉的是 provider
+# 設定與「模型從哪來」的整套 runtime 佈建（見下方安裝步驟）。
+#
+# 步驟刻意拆細（安裝／拉模型／裝 promptfoo／評測）：這樣哪一關紅了，
+# 一眼就知道是基礎設施壞掉還是模型答錯——兩者的意義完全不同。
+name: eval-local
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-eval:
+    runs-on: ubuntu-latest
+    # 必須大於所有步驟 timeout 的總和（5＋8＋5＋10＝28）再加 checkout／setup-node
+    # 的餘裕：job 層 timeout 一旦先觸發，整個 job 會被砍掉，下面精心分層的
+    # ::error:: 訊息與 step summary 都不會執行——那正好毀掉「哪一關紅了一眼看出」。
+    timeout-minutes: 35
+    env:
+      PROMPTFOO_DISABLE_TELEMETRY: "1"
+      PROMPTFOO_DISABLE_UPDATE: "1"
+      PROMPTFOO_DISABLE_SHARING: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安裝並啟動 Ollama（基礎設施）
+        timeout-minutes: 5
+        run: |
+          # 先落地再執行，不用 curl | sh：這樣執行的內容有機會被檢視，而且
+          # 下面的 sha256 會把「這次實際跑了哪一份腳本」留成稽核痕跡。
+          # 注意：這只是留痕，不是版本鎖定——上游改版時雜湊就會變，
+          # 真要鎖版本得改抓特定 release 並比對已知雜湊（待決策）。
+          curl -fsSL https://ollama.com/install.sh -o /tmp/ollama-install.sh
+          echo "install.sh sha256：$(sha256sum /tmp/ollama-install.sh | cut -d' ' -f1)"
+          sh /tmp/ollama-install.sh
+          echo "已安裝的 Ollama 版本：$(ollama --version 2>&1 | head -1)"
+          (pgrep -x ollama > /dev/null) || (nohup ollama serve > /tmp/ollama.log 2>&1 &)
+          # 等服務就緒；等不到就明確失敗並附上 log，不要讓下一步丟出無頭緒的連線錯誤
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:11434 > /dev/null && READY=1 && break
+            sleep 2
+          done
+          if [ "${READY:-0}" != "1" ]; then
+            echo "::error::Ollama 在 60 秒內未就緒——以下是 /tmp/ollama.log"
+            cat /tmp/ollama.log || true
+            exit 1
+          fi
+          echo "Ollama 已就緒"
+      - name: 拉取小模型（基礎設施）
+        timeout-minutes: 8
+        run: |
+          # 要拉哪顆模型，以 config 為單一真相——否則「想加碼就把 config 換成
+          # qwen2.5:3b」會拉了 1.5b 卻去打 3b，得到 model not found 的假紅燈。
+          # 先確認檔案在：GitHub Actions 的 run 預設是 `bash -eo pipefail`，
+          # 而 `VAR=$(cmd)` 的結束碼就是 cmd 的結束碼——檔案不存在時 sed 回非零，
+          # set -e 會當場中止整個 step，下面那句友善的 ::error:: 永遠不會印出來，
+          # 只留下 sed 自己的英文訊息。這個 repo 才剛把 config 改過一輪檔名
+          # （*.live.yaml → *.local.yaml），檔案被搬走不是假想情境。
+          CONFIG=labs/lab2-golden-eval/promptfooconfig.local.yaml
+          if [ ! -f "$CONFIG" ]; then
+            echo "::error::找不到 $CONFIG——config 被改名或搬走了？"
+            exit 1
+          fi
+          MODEL=$(sed -n 's/^[[:space:]]*- id:[[:space:]]*ollama:chat:\(.*\)$/\1/p' \
+            "$CONFIG" | head -1)
+          if [ -z "$MODEL" ]; then
+            echo "::error::無法從 $CONFIG 解析出 ollama:chat: 的模型名"
+            exit 1
+          fi
+          echo "config 指定的模型：$MODEL"
+          time ollama pull "$MODEL"
+          # 傳給後面的步驟：run block 內的 shell 變數不會跨步驟存活，
+          # 摘要要報出「實際考的是哪顆模型」就得走 GITHUB_ENV。
+          echo "MODEL=$MODEL" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 安裝 promptfoo（基礎設施）
+        timeout-minutes: 5
+        run: npx -y promptfoo@0.121.19 --version
+      - name: 本地模型評測（promptfoo × Ollama，零 API key）
+        timeout-minutes: 10
+        working-directory: labs/lab2-golden-eval
+        run: |
+          # 自己用 coreutils 的 timeout 控時，而不是只靠 step 層的 timeout-minutes：
+          # step 層一旦先觸發，GitHub 直接砍掉整個 run block，下面分辨「基礎設施壞掉
+          # ／沒作答／答錯」的判讀與 step summary 全都不會執行——那正是本檔在 job 層
+          # 特別提防的同一種失效，只是換到風險更高的這一層（CPU 推論是全流程最慢、
+          # 最可能吃滿時間的一段）。480 秒＝給判讀留 2 分鐘，仍在 step 的 10 分鐘內。
+          EXIT=0
+          timeout 480 npx -y promptfoo@0.121.19 eval -c promptfooconfig.local.yaml \
+            --no-progress-bar -o output.json || EXIT=$?
+          # 評測非零有三種意義完全不同的原因，摘要不能混為一談：
+          #   1. Ollama 半路死掉        → 基礎設施故障
+          #   2. 模型沒有真的作答       → 執行期／設定錯誤（模型沒拉到、OOM、請求被拒）
+          #   3. 以上皆非              → 模型答錯，預期內的教學訊號
+          # 只探測 daemon 存活不足以區分 2 與 3：模型載入失敗時 daemon 照樣活得好好的，
+          # 卻會被報成「模型答錯」，把設定 bug 誤導成教學素材。
+          # 2 與 3 的判讀在 summarize_eval.js 裡（含實測依據與被它推翻的兩種直覺修法），
+          # 由 tests/test_eval_summary.py 守門；這裡只負責 1，因為那要即時探測服務。
+          if [ "$EXIT" = "124" ]; then
+            {
+              echo "### ⚠️ eval-local 未完成——評測逾時，不是模型品質訊號"
+              echo ""
+              echo "promptfoo 在 8 分鐘內沒有跑完（runner 的 CPU 較慢，或推論卡住）。"
+              echo "這一次的紅**不能**當成「小模型答錯」，請重跑；若經常逾時，請同時"
+              echo "調高上面的 \`timeout 480\`、本步驟的 timeout-minutes 與 job 層的 timeout-minutes。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif ! curl -sf http://localhost:11434/api/tags > /dev/null; then
+            {
+              echo "### ⚠️ eval-local 未完成——基礎設施故障，不是模型品質訊號"
+              echo ""
+              echo "評測結束時 Ollama 已無回應（服務中途死亡或被 OOM 殺掉）。"
+              echo "這一次的紅**不能**當成「小模型答錯」來解讀，請重跑。"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            node summarize_eval.js output.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$EXIT"

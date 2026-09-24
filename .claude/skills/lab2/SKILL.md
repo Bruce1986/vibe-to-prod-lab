@@ -18,6 +18,6 @@ description: 引導學員完成 Lab 2（Golden Dataset 與 Prompt Regression）�
    建議同步 `tests/golden_cases.json`。
 4. 學員問「為什麼 mock 知道 prompt 變差了」時，誠實說明教學模擬器機制
    （`mock_provider.js` 以關鍵句判斷），並強調真實世界要用真模型評測——
-   順勢介紹加分關 `/live-eval`。
+   順勢介紹加分關 `/local-eval`。
 5. 結尾思考題：golden dataset 該多大才夠？誰來維護它？（帶到「golden set
    也要版控與 review」）

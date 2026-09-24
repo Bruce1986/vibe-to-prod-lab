@@ -7,12 +7,12 @@
 | App＋四層測試（pytest 26 綠） | ✅ | Python 3.9 相容驗證過 |
 | Lab 1／2／3 導引 | ✅ | 各含 README＋AGENTS.md＋CLAUDE.md |
 | promptfoo golden 軌 | ✅ | 本機實測：good 6/6 綠；劣化 prompt 1/6（exit 100） |
-| Skills ×5（兩工具通用） | ✅ | /course-help /lab1 /lab2 /lab3 /live-eval |
-| Workflows ×3 | ✅ | quality／eval-live／slides |
+| Skills ×5（兩工具通用） | ✅ | /course-help /lab1 /lab2 /lab3 /local-eval |
+| Workflows ×3 | ✅ | quality／eval-local／slides |
 | 投影片 ×3（Marp） | ✅ v2+ | 13／18／12 張；含講者備忘＋時間配額；案例①②已入 deck 2；待 Bruce 彩排微調 |
-| 案例集 docs/case-studies.md | ✅ 定稿 | 六案（07-16 owner 核准；「錯的 base」案依 owner 決策移除）；對照表對齊官方課綱 |
+| 案例集 docs/case-studies.md | ⏳ 待 owner 確認 | 六案；對照表對齊官方課綱。⚠️ 本列原記「✅ 定稿（07-16 owner 核准）」，但該說法與檔案內文的「草稿，待講師逐案核准」出自**同一顆 commit `a008d2b`**（建檔那顆），兩者不是獨立佐證，無法由 repo 內部判定——詳見該檔開頭與 2026-09-21 條目⑮ |
 | Template flag／Pages 設定 | ✅ | 2026-07-15 API 設定；Pages HTTP 200 |
-| eval-live 實測（GitHub Models） | ✅ 首測 | 3/3 PASS（gpt-4o-mini）；課前一週複測 |
+| 加分關 eval-local（Ollama） | ✅ 已換引擎 | GitHub Models 7/30 退役→改本地小模型；PoC 1/3、約 3 分鐘、零 token |
 | 課前實測清單 | ⏳ | docs/teacher-setup.md |
 
 任務單一真相：課程整體規劃在 website repo 的
@@ -67,3 +67,175 @@
   force push（當時無其他 clone）；本 repo 與 website repo 均已設 local
   user.name／user.email 防再犯。教訓：**憑證帳號≠commit 作者**，
   多身分機器開新 repo 首 commit 前先查 `git config user.email`。
+
+### 2026-07-16（加分關換引擎：GitHub Models 退役應變）
+
+- **背景**：GitHub Models 官方公告 2026-07-30 全面退役（7/1 changelog、
+  7/16 與 7/23 brownout、含既有客戶）——原加分關 eval-live 會在開課前
+  19 天死亡。owner 拍板改走本地模型路線。
+- **PoC**（分支 `poc/ollama-eval`，已驗證後併回主線）：Ollama qwen2.5:1.5b
+  跑在 ubuntu runner 上、promptfoo ollama provider；第一輪 3 題全掛＝
+  Ollama 預設輸出上限截斷 JSON（教訓：eval 基礎設施要先驗自己），加
+  `num_predict: 512`＋`temperature: 0` 後：**1/3 通過、全程約 3 分鐘、
+  零 token 零帳號零費用**；失敗的兩題＝幻覺誘餌上當、模糊輸入瞎猜——
+  與雲端 gpt-4o-mini 的 3/3 形成同卷對照，「紅色也是資訊」內建。
+- **主線重構**：eval-live.yml／promptfooconfig.live.yaml 移除；新增
+  eval-local.yml＋promptfooconfig.local.yaml＋tests.small.yaml（原
+  tests.live.yaml 改名重註解）；skill `/live-eval` → `/local-eval`；
+  README／AGENTS.md／CLAUDE.md／lab2 README＋AGENTS／deck 2（案例①加映、
+  訃聞頁擴為雙訃聞、Lab 2 卡）／teacher-setup 全數同步。
+- **設計定位**：eval-local 是 **monitor 不是 gate**——紅色是資訊、不擋
+  部署，與案例 6（known-failing monitor）同構；GitHub Models 退役史
+  保留為教材（provider 抽象讓 golden 題目與 prompt 免改；實際出力的是
+  provider 設定、生成參數、模型佈建與斷言寫法加固——不是「只改一行」，
+  這點在 docs/02-llm-quality.md 已誠實寫明，兩處說法須一致）。
+
+### 2026-09-11（加分關的結果判讀：把「沒作答」與「答錯」分開）
+
+- **問題**：eval-local 原本用「Ollama daemon 還活著」＋「output.json 存在
+  且能 parse」兩道判斷來區分基礎設施故障／設定錯誤／模型答錯。**實測推翻
+  第二道**（promptfoo 0.121.19，架一個對 `/api/tags` 回 200、對 `/api/chat`
+  回 404 `model not found` 的假 Ollama）：promptfoo 正常結束（exit 100）並
+  寫出完全合法的 output.json，三筆 `response.output` 全是空字串，
+  `stats.errors` 是 **0**、`failureReason` 是 ASSERT。於是整輪落進成功分支，
+  摘要印出「🏠 eval-local 完成」並複述「雲端 gpt-4o-mini 曾拿 3/3」——
+  讀者只會看到「小模型 0/3」，而真相是模型一題都沒答。
+- **順帶推翻的直覺修法**：「改成去找 error／failureReason=ERROR 的結果列」
+  在這個狀態下是假守門（那個計數就是 0）。分得出來的訊號只有一個：
+  **沒有任何一筆拿到非空的模型輸出**。這條也寫成突變測試釘住。
+- **修正**：判讀抽成 `labs/lab2-golden-eval/summarize_eval.js`（workflow 的
+  run block 只有真的在 CI 跑一次才會執行，寫錯沒有守門會紅），新增
+  `tests/test_eval_summary.py` 用兩份 **promptfoo 實跑出來的原始 output.json**
+  兩側都驗；摘要同時改成報出「本次成績 X/N」而不是只複述歷史對照，並把
+  lab README 那段誠實但書一併帶進摘要。
+- **另修**：評測指令改用 `timeout 480` 自己控時。step 層的 `timeout-minutes`
+  先觸發時 GitHub 會直接砍掉整個 run block，精心分層的摘要一行都不會執行
+  ——那正是本檔在 job 層特別提防、卻沒有防到這一層（最慢、最可能吃滿時間的
+  CPU 推論）的同一種失效。逾時另有專屬摘要。
+- 驗證：pytest 61 綠（原 48 ＋ 新 13）、`ruff check app tests labs` 乾淨；
+  七個突變（拿掉沒作答判斷／成績寫死 3/3／改用 ERROR 列／空字串算作答／
+  workflow 不呼叫判讀／拿掉自控 timeout／timeout 調到比 step 還長）全部致紅。
+- **同輪再修三處（錯誤處理視角）**：
+  ① `quality.yml` 的 `lint-test` 沒裝 node，而 `tests/test_eval_summary.py`
+  與 `tests/test_local_eval_asserts.py` 這兩份（要靠 node 跑「線上那份
+  JavaScript」的守門）都用 `skipif` 保護——**本機實測 `env -i PATH=<空目錄>
+  pytest <那兩份>` 得到整批 skipped、離開碼 0**，守門一條都沒跑、CI 照樣全綠。
+  補上 `actions/setup-node@v4`（與另兩軌同為 22），並新增
+  `tests/test_ci_toolchain.py`：CI 上沒有 node 就紅，本機維持可跳過。
+  ② eval-local 的「拉取小模型」把 `MODEL=$(sed … config | head -1)` 的
+  結果交給 `-z` 判斷，但 GitHub Actions 的 run 預設是 `bash -eo pipefail`，
+  config 不存在時 sed 回非零、`set -e` 當場中止，那句友善的 `::error::`
+  永遠印不出來（實測：修正前只吐 `sed: …: No such file or directory`，
+  修正後吐 `::error::找不到 …`）。改成先檢查檔案存在。
+  ③ `summarize_eval.js` 對非物件的結果列會拋 TypeError（崩掉＝step summary
+  一片空白），加上防護；`run_summary` 改成不吃 `check=True`，讓 node 的
+  stderr 出現在失敗訊息裡——守門自己紅的時候要看得出原因。
+- 補記一個自己造的假守門：①的防護剛寫好時，配的兩個測試案例（結果列是
+  null／字串）在**拿掉防護後照樣全綠**——它們在「全部沒作答」就先轉彎了，
+  根本走不到會崩的算分那段。改成「有作答的列後面混一個 null」才真的致紅。
+- **同輪再修三處（接手性視角）**：
+  ④ 上一條記錄裡「35 條守門」這個數字**從寫下的那一刻就是錯的**（實際 38，
+  因為同一個 commit 又加了 3 個 parametrize 案例）。已把 quality.yml 註解、
+  `test_ci_toolchain.py` 與本檔的說法改成不寫死數量——這種會隨 parametrize
+  浮動的計數寫進四個地方，等於一次留四句遲早過期的宣稱。
+  ⑤ `tests.small.yaml` 的三段掃描器是逐字拷貝，但只有第 1 題被餵過圍欄／
+  覆誦範例／未配對引號那些邊角輸入——另外兩份的掃描器等於從沒被考過。
+  已把邊角案例補到第 2、3 題，並新增 `test_three_scanners_stay_byte_identical`
+  把「三份必須同步」這個原本只存在腦中的契約釘成守門（實測：只改其中一份
+  即致紅），tests.small.yaml 的註解也寫明。
+  ⑥ 兩份 fixture 只留下指向某台機器暫存沙箱的絕對路徑當線索，等於沒有
+  重現方式。已附上 `tests/fixtures/eval_local/fake_ollama.py`（產生那份
+  provider-error 原檔用的假 Ollama）與 README 裡可複製貼上的完整步驟，
+  並把絕對路徑換成佔位字串（README 寫明只動了這一處與檔名）。
+- **同輪 Opus tracer 專審本日三顆 commit，抓到 6 條自造缺陷（全修）**：
+  ⑦ **「部分題目沒作答」時把沒答到的算進分母**——3 題裡 2 題沒輸出、1 題
+  答對會印成「本次成績 1/3」並與 gpt-4o-mini 的 3/3 並排，正是本日要修的
+  那種誤讀，只是縮小成部分題目。改成分母只算真的拿到輸出的題目
+  （「1/1（另有 2 筆沒拿到模型輸出，不計分）」）。
+  ⑧ **把本次題數內插進固定的歷史事實**：「曾以這 ${total} 題拿 3/3」
+  「${total} 題的樣本小到單題翻面就是 33 個百分點」——3/3 與 33 都是寫死的，
+  只有分母會動，題數一變就印出捏造的量測。且 promptfoo 的**列數＝題數 ×
+  provider 數**（⚠️ 2026-09-21 更正：原本這裡寫「實測：同一份 tests.small.yaml
+  配兩個 provider ⇒ 6 列、testIdx 為 [0,0,1,1,2,2]」，但 repo 裡沒有 2-provider
+  的原始 output.json，當時的驗證是由既有 fixture 衍生的、不是實跑留底。
+  「列數＝題數 × provider 數」與 promptfoo 的文件化行為一致，但本 repo 未留證，
+  故撤下「實測」二字）。歷史對照句全部寫死，題數改由 testIdx 去重算，
+  題數不是 3 時直接說「沒有可比的對照組」。
+  ⑨ 檔頭實測記錄裡「整份檔案裡沒有任何 error 欄位」**是錯的**：三筆都有
+  `error`，內容是斷言訊息，跟模型真的答錯時長得一樣——那才是「找 error 列」
+  分不出來的真正理由。已改正，並補測試把新說法釘住。
+  ⑩ 「全部沒作答」那段無條件說「promptfoo 把每一筆記成斷言失敗」，但
+  errors>0（打不到服務）時記的是 ERROR，同段自相矛盾；措辭改成依 errors 分岔。
+  ⑪ `test_ci_toolchain.py` 只檢查執行當下 PATH 有沒有 node，**把 quality.yml
+  的 setup-node 整段拿掉照樣全綠**——它宣稱要防的回歸它抓不到。改成直接讀
+  quality.yml 斷言 lint-test 有 setup-node，且各軌 node 版本一致。
+  ⑫ fixture README 的重現步驟產不出庫裡那份 `output_answered.json`
+  （description／providers 對不上）。已照文件步驟**重新產生**該 fixture，
+  並實測「照 README 跑出來的 `config` 區塊與庫裡兩份逐字相同」。
+- 本輪突變六個（分母含沒作答／題數內插回對照句／不分 errors 同一句話／
+  題數用列數不去重／拿掉 setup-node／兩軌 node 版本不一致）全部致紅；
+  pytest 78 綠 1 skip、ruff 乾淨。
+
+### 2026-09-21（排程班第 8／9 輪：把「沒量到的東西」從摘要與紀錄裡清掉）
+
+- 第 8 輪（三 lens：迴歸審 720f5d5／測試品質突變／不看 diff 全文通讀）：
+  ⑬ `summarize_eval.js` 的 `countDistinct()` 對缺鍵的列用 `#index` 當 key，
+  每列各成一組。單一 provider 時剛好等於題數、看不出問題；**2 個 provider
+  就把 3 題 ×2 的 6 列報成「6 題」**，並因 6 ≠ 3 連帶把對照組改印「本次是
+  6 題」——一個憑空捏造的量測，講得跟真的一樣，正是這支摘要存在的理由換了
+  個觸發點。改成回傳 `{count, complete}`，不完整時改口「無法回推題數」並
+  停掉對照組；列數（實際數得出來）照報、成績（逐列算）不受影響。
+  ⑭ `test_ci_toolchain` 的 `"actions/setup-node" in body` 純子串比對會被
+  step 名稱騙過（reviewer 實測誤觸：step 取名含該字串時假綠）。改比對
+  `uses:` 欄位。
+- 第 9 輪（Opus 對抗性 tracer，專打第 8 輪自己的修正）：
+  ⑮ 🔴 **撤回第 8 輪對 `docs/case-studies.md` 的「定稿」判定**。第 8 輪宣稱
+  「repo 內部證據足以判定、不再需要 owner 裁決」，依據是 commit `a008d2b`
+  的標題與 `WORKLOG.md` 的「✅ 定稿」。但 `a008d2b` 正是**建檔那一顆**，且
+  它**同一次寫入**同時寫下「定稿（owner 核准）」與內文的「草稿，待講師逐案
+  核准」——兩份「互相佐證」是同一個作者、同一顆 commit，不是獨立來源。
+  已退回「待 owner 確認」並如實記下兩種說法並存。
+  ⑯ `providersKnown` 整套零覆蓋（拿掉它 81 passed 全綠），補測試。
+  ⑰ 第 8 輪撤掉的那句「實測」只改了 docstring，同一句話在本檔還活著（見
+  ⑧ 的更正）。⑱ 第 8 輪補的出處「AGENTS.md『未查證的推測不進永久紀錄』」
+  在本 repo 的 AGENTS.md 裡查無此條——寫下查不到的出處，正是那句話要防的事。
+  ⑲ 跳脫引號案例只餵第 1 題，另外兩份掃描器仍零覆蓋，各補一筆。
+  ⑳ 新測試五條斷言有三條空轉（換個措辭講出捏造的題數仍全綠），改成語意斷言。
+- 本輪突變全部致紅（缺 testIdx 冒充題數／缺 provider 冒充 provider 數／
+  註解掉 setup-node 的假綠／引號 YAML 的假紅／三份掃描器的跳脫邏輯）；
+  pytest 84 綠 1 skip、ruff 乾淨。
+- ⚠️ 仍待 owner：`docs/case-studies.md` 的定稿與否；`docs/teacher-setup.md`
+  「課前一週實測清單（8/11 前）」下的兩條未勾待辦（2026-08-16 加入，晚於
+  自標期限、早於開課日 08-18 兩天，全 repo 查無「下學期」字樣，證據傾向
+  過期遺忘但非決定性）；`.claude/skills/local-eval/SKILL.md` 的「只改了
+  一行」與本 repo 其餘五處的誠實版本牴觸（owner 第 3 輪已裁示本次不動）。
+
+### 2026-09-24（排程班第 10 輪：clean pass 確認，＋兩條學員路徑的缺口）
+
+- 本輪的指定任務是 clean pass 確認，不是再開新改動。對第 9 輪的八項宣稱逐一
+  做突變複驗，**七項完全成立、無迴歸**：`uses:` 正則（整行註解→紅；雙引號／
+  單引號／無空白／改縮排／行內註解→全綠，即假紅已關）、`providersKnown` 新
+  守門（退回 `providers>1` → 1 failed）、`multi` 改用 `rows.length !== questions`
+  （單 provider＋repeat 2 會印出「共 6 筆結果」；單 provider 單次仍不多印，
+  沒有新假紅）、三份掃描器的跳脫案例（只砍第 1／第 2／第 3 份各自都紅）、
+  WORKLOG 與 docstring 的「實測」字樣已撤且無第三處殘留、AGENTS.md 出處已改
+  成不指名、`docs/case-studies.md` 與本檔狀態表的措辭一致且全 repo 無第三處
+  還寫「定稿」。第 8 輪對 `a008d2b` 的誤判也再次複驗屬實（`a008d2b~1` 查無此
+  檔＝建檔那顆，同一顆 commit 同時寫下「定稿」與「草稿」）。
+- ㉑ **「各軌的 node 版本應該一致」只掃了 quality.yml**。那句斷言訊息寫「各軌」，
+  但 `re.findall` 的對象是 quality.yml 的內文，實際只比對它內部 lint-test 與
+  golden-eval 兩個 job。`eval-local.yml`（學員按 `/local-eval` 走的那一軌）與
+  `slides.yml` 各自也釘 node 版本，漂移沒有人管——突變實證：把 eval-local.yml
+  改成 `node-version: 20`、其餘不動，整份 pytest 仍全綠。已抽成獨立的
+  `test_all_workflows_pin_the_same_node_version`，掃 `.github/workflows/` 底下
+  所有釘了 node-version 的檔案（新增 workflow 自動納入）。回驗：eval-local 改
+  20 → 紅、slides 改 18 → 紅、glob 指到不存在的目錄 → 紅（非恆真），原本那條
+  `test_lint_test_job_installs_node` 把 `uses:` 整行註解掉仍 → 紅（未退步）。
+- ㉒ `docs/02-llm-quality.md` 對學員承諾的「全程約 3 分鐘」沒有時點。出處是
+  2026-07-16 的 PoC 分支（`docs/teacher-setup.md:30` 與本檔 07-16 條目都有標
+  日期，只有學員讀的那份沒標），而該數字之後 workflow 又經多輪加固，現在四個
+  步驟的 timeout 預算合計 28 分鐘、job 層 35 分鐘，重構後未再計時。已在該處補
+  上量測時點與「等第一次正式跑完再回來訂正」。
+- pytest 85 綠（新增 1）1 skip、ruff 乾淨。
+- ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
+  也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
