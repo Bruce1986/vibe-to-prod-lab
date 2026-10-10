@@ -239,3 +239,40 @@
 - pytest 85 綠（新增 1）1 skip、ruff 乾淨。
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
+
+### 2026-10-10（互動 session：第 11–12 輪，owner 指示續審）
+
+- 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
+  `origin/main` 的整份 diff 無意見；以下是 Claude reviewer 與主審實測找到的。
+- ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
+  為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
+  「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json
+  先掛、語意斷言過、整題 Fail——整題判定由契約斷言決定，語意斷言抽得準不準
+  只改變逐條明細。檔頭已改寫成這個說法。掃描器本身沒有動。
+- ㉔ **但書的理由寫錯了對象**。`docs/02`、lab2 README、`summarize_eval.js` 都說
+  3/3 與 1/3 不可比是因為「擷取邏輯不同」；依 ㉓，擷取不改變整題判定。實測到
+  會讓整題判定不同的是：誘餌題若模型回「反問」（合法、符合 schema、沒有
+  items），舊單行斷言拋 TypeError 整題 Fail，新斷言判 Pass。三處改成「斷言寫法
+  不同」，`docs/02` 另寫出這個例子。**這只是一種實測到的差異，沒有窮舉。**
+- ㉕ 誘餌題的斷言補兩筆案例：跳跳糖排在合法配料後面（突變 `toppings[0] ===`
+  → 這筆紅；拿掉這筆 → 該突變全綠）、回反問沒有 items（突變拿掉可選鏈 → 這筆紅）。
+- ㉖ `slides/02` 的「同一份考卷：1/3 對 3/3」補「非受控對照」，講者備忘加但書；
+  README 的「斷言要驗的東西也一字未改」改成「也沒變」；本檔狀態表的
+  「pytest 26 綠」是 main 上的數字，改成不寫死。
+- ㉗ **兩份測試在非 UTF-8 locale 下會整批紅**。`subprocess.run(text=True)` 沒指定
+  編碼，會用系統 locale 解 node 印出的 UTF-8。以 `LC_ALL=C PYTHONUTF8=0
+  PYTHONCOERCECLOCALE=0`（locale 編碼變成 US-ASCII）重現：修正前 17 failed／
+  42 passed，補上 `encoding="utf-8"` 後 59 passed。Windows 中文版（cp950）是
+  同一條路徑，**但沒有在 Windows 上實跑**。
+- 本條目寫下時全套 pytest 87 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
+- 查過但沒有修、留給 owner 判斷值不值得：
+  - 掃描器遇到深度 0 的未閉合 `{`（例如散文「格式 { 如下：」）之後收不到任何
+    候選，語意斷言會判 Fail。依 ㉓ 那種輸出整題本來就 Fail，只影響明細。
+  - `test_workflow_calls_the_summarizer` 是子字串比對：把呼叫改成 `echo node …`、
+    拿掉 `|| EXIT=$?` 或 `exit "$EXIT"`，測試都不會紅（reviewer 突變實測）。
+  - `summarize_eval.js` 有幾個分支沒有斷言守著（純空白輸出、`診斷：` 那行、
+    provider 只有 id 沒有 label 等，同一位 reviewer 的突變實測）。
+  - `.claude/skills/local-eval/SKILL.md` 仍寫「同一份考卷拿 3/3」而沒有但書
+    （owner 先前指示該檔不動）。
+  - main 在本分支之後替單元一投影片加了一頁，狀態表的「13／18／12 張」合併後
+    第一個數字會過期。

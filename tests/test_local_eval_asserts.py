@@ -185,6 +185,8 @@ def test_assertion_verdict(index, label, output, expected):
         [NODE, "-e", script, json.dumps(body), json.dumps(output)],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=30,
         check=True,
     )

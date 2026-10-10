@@ -44,7 +44,11 @@ def run_summary(output_path, model="qwen2.5:1.5b", cwd=None):
     result = subprocess.run(
         [NODE, str(SUMMARIZER), str(output_path)],
         capture_output=True,
+        # 明講 UTF-8：只寫 text=True 會用系統 locale 解碼，Windows 中文版是 cp950，
+        # node 印出來的 UTF-8 中文會解成亂碼或直接解碼失敗。
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=30,
         check=False,
         cwd=str(cwd or REPO_ROOT),
