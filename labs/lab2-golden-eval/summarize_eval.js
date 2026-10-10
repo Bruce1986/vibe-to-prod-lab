@@ -189,7 +189,7 @@ function summarize(path) {
   } else if (questions === BASELINE_QUESTIONS) {
     lines.push('- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3（2026-07-15 實測）');
     lines.push('  （但書：3/3 那次跑的是舊版單行斷言，本次跑的是現在的防禦性斷言，');
-    lines.push('  兩次的擷取邏輯不同；而且 3 題的樣本小到單題翻面就是 33 個百分點。');
+    lines.push('  兩次的斷言寫法不同；而且 3 題的樣本小到單題翻面就是 33 個百分點。');
     lines.push('  這個對照足以說明「同一份 golden 可以換模型重考」，但不是精確的模型能力量測。）');
   } else {
     lines.push(`- 沒有可比的對照組：歷史上的 gpt-4o-mini 3/3 考的是 3 題，本次是 ${questions} 題`);

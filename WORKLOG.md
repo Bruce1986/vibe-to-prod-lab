@@ -4,7 +4,7 @@
 
 | 項目 | 狀態 | 備註 |
 |---|---|---|
-| App＋四層測試（pytest 26 綠） | ✅ | Python 3.9 相容驗證過 |
+| App＋四層測試（pytest 全綠，數量見日誌最新一筆） | ✅ | Python 3.9 相容驗證過 |
 | Lab 1／2／3 導引 | ✅ | 各含 README＋AGENTS.md＋CLAUDE.md |
 | promptfoo golden 軌 | ✅ | 本機實測：good 6/6 綠；劣化 prompt 1/6（exit 100） |
 | Skills ×5（兩工具通用） | ✅ | /course-help /lab1 /lab2 /lab3 /local-eval |

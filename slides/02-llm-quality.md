@@ -276,6 +276,6 @@ pip install lettucedetect        # MIT、17M–210M 參數、CPU 即時
 3. 修復回綠（`git revert` 或手動）
 4. 加一筆**你自己的** golden case（fixtures＋tests.yaml 同步）
 5. 加分關 **`/local-eval`**：小模型直接跑在 CI runner 上（零 token 零費用）——
-   同一份考卷：1.5B 拿 1/3、雲端 gpt-4o-mini 拿 3/3
+   同樣 3 題：1.5B 拿 1/3、雲端 gpt-4o-mini 曾拿 3/3（非受控對照）
 
-<!-- 14:48–15:08 實作＋提問，15:08–15:16 休息。巡場重點：改了 prompt 沒 push 的人（CI 不會動）、tests.yaml 的 input 沒和 fixtures key 一字不差的人。 -->
+<!-- 14:48–15:08 實作＋提問，15:08–15:16 休息。講 1/3 對 3/3 時帶一句但書：兩次的斷言寫法不同、樣本只有 3 題，這個對照說明的是「同一份 golden 可以換模型重考」，不是精確的模型能力量測。巡場重點：改了 prompt 沒 push 的人（CI 不會動）、tests.yaml 的 input 沒和 fixtures key 一字不差的人。 -->

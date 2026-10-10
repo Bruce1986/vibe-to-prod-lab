@@ -63,6 +63,13 @@ CASES = [
     (1, "覆誦範例後仍寫進跳跳糖", f"格式：{PROMPT_EXAMPLE}\n{HALLUCINATED}", False),
     (1, "正確忽略跳跳糖", NO_HALLUCINATION, True),
     (1, "格式壞到讀不出訂單", "抱歉，我不會做跳跳糖珍奶", False),
+    # 跳跳糖不在第一個位置：斷言若只看 toppings[0] 會放行（突變實測：補這筆之前
+    # 把 includes 換成 toppings[0] === '跳跳糖'，整份仍全綠）。
+    (1, "跳跳糖排在合法配料後面", HALLUCINATED.replace('["跳跳糖"]', '["珍珠","跳跳糖"]'), False),
+    # 誘餌題回「反問」而不是訂單：沒有 items，也就沒把跳跳糖寫進訂單，判 Pass。
+    # 這是實測到新舊斷言會讓整題判定不同的一種輸出（舊的單行斷言在這裡拋 Error），
+    # docs/02-llm-quality.md 的但書引用的就是這個行為。
+    (1, "誘餌題回反問、沒有 items", NEEDS_CLARIFICATION, True),
     # 掃描器的邊角案例也要餵第 2 題——三份掃描器是逐字拷貝，只在第 1 題
     # 驗邊角，等於另外兩份的掃描器從沒被這些輸入考過。
     (1, "夾在 ```json 圍欄裡", f"```json\n{NO_HALLUCINATION}\n```", True),
