@@ -163,7 +163,7 @@
   部署四步與 WORKLOG 描述一致；`templates/` 四檔清單與 `README.md`、`AGENTS.md`、
   投影片三處一致；全 repo md 相對連結無懸空。
 - 第 10 輪（Opus tracer ×2：迴歸審第 9 輪的修正／對抗性複驗前九輪的「已定案」清單）
-  ——**教材本體零 finding，六條全落在 WORKLOG 與 README 的自我描述**：
+  ——**十條／八條／checklist 的內容零 finding，六條落在 WORKLOG、README、`slides/03` 與 `AGENTS.sample.md` 對範本的描述與引用**：
   - **第 9 輪的更正句自己寫錯了它在更正什麼**：原寫「第 8 輪把總數從錯的 10 改成
     14」，但 `git show 5fc8f0e` 的 `-`／`+` 兩行都寫著「共 14 項」——總數從未被動過，
     第 8 輪改的是組成拆解。已改正。（commit `be8fee2` 的訊息有同一處措辭；squash
