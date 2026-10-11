@@ -240,7 +240,7 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10（互動 session：第 11–12 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–13 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
   `origin/main` 的整份 diff 無意見；以下是 Claude reviewer 與主審實測找到的。
@@ -259,12 +259,23 @@
 - ㉖ `slides/02` 的「同一份考卷：1/3 對 3/3」補「非受控對照」，講者備忘加但書；
   README 的「斷言要驗的東西也一字未改」改成「也沒變」；本檔狀態表的
   「pytest 26 綠」是 main 上的數字，改成不寫死。
-- ㉗ **兩份測試在非 UTF-8 locale 下會整批紅**。`subprocess.run(text=True)` 沒指定
-  編碼，會用系統 locale 解 node 印出的 UTF-8。以 `LC_ALL=C PYTHONUTF8=0
+- ㉗ **兩份測試在非 UTF-8 locale 下有 17 條會紅**。`subprocess.run(text=True)`
+  沒指定編碼，會用系統 locale 解 node 印出的 UTF-8。以 `LC_ALL=C PYTHONUTF8=0
   PYTHONCOERCECLOCALE=0`（locale 編碼變成 US-ASCII）重現：修正前 17 failed／
-  42 passed，補上 `encoding="utf-8"` 後 59 passed。Windows 中文版（cp950）是
-  同一條路徑，**但沒有在 Windows 上實跑**。
+  42 passed（紅的都在 `test_eval_summary.py`，要解 node 印出的中文），補上
+  `encoding="utf-8"` 後 59 passed。Windows 中文版（cp950）是同一條路徑，
+  **但沒有在 Windows 上實跑**。
 - 本條目寫下時全套 pytest 87 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
+- ㉘ **「逐題看掛在契約還是語意斷言」在 Actions 頁面上做不到**（第 13 輪，反方
+  論證視角）。`.claude/skills/local-eval/SKILL.md` 第 4 步這樣引導，㉓ 改寫的
+  檔頭原本也拿它當掃描器的用途。實跑 promptfoo 0.121.19（workflow 同樣的
+  `--no-progress-bar -o output.json`）：job log 的表格每題只有 `[PASS]`／`[FAIL]`
+  加模型原始輸出，不印是哪一條斷言掛；`summarize_eval.js` 只報總分；workflow
+  沒有上傳 `output.json`。逐條結果只在 runner 上那份 `output.json` 裡，run 結束
+  就沒了。本輪只把 `tests.small.yaml` 檔頭改成如實描述，**機制沒有補**——要補
+  有兩條路，都是新功能，留給 owner 決定：(a) `summarize_eval.js` 多印一段逐題
+  明細（讀 `gradingResult.componentResults`，要一併補測試）；(b) workflow 用
+  `actions/upload-artifact` 上傳 `output.json`。SKILL.md 那一步在補之前照做不到。
 - 查過但沒有修、留給 owner 判斷值不值得：
   - 掃描器遇到深度 0 的未閉合 `{`（例如散文「格式 { 如下：」）之後收不到任何
     候選，語意斷言會判 Fail。依 ㉓ 那種輸出整題本來就 Fail，只影響明細。

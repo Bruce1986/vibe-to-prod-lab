@@ -18,8 +18,11 @@
 # （前後有散文、包在 ```json 圍欄裡），defaultTest 的 is-json 就先掛，整題本來
 # 就是 Fail，語意斷言抽得再準也救不回來（promptfoo 0.121.19 實測：散文＋正確
 # JSON、圍欄＋正確 JSON 兩種輸出，都是 is-json 掛、語意斷言過、整題 Fail）。
-# 抽準的用處在判讀——/local-eval 帶學員逐題看「掛在契約還是語意」，抽取器
-# 失誤會把「只有格式錯」的題目印成「格式錯、內容也錯」。
+# 抽準的用處在逐條明細：抽取器失誤會把「只有格式錯」的題目記成「格式錯、
+# 內容也錯」。注意這份明細目前只存在 output.json 的
+# gradingResult.componentResults 裡——promptfoo 印在 job log 的表格每題只有
+# [PASS]／[FAIL] 加模型原始輸出，summarize_eval.js 的摘要也只報總分，
+# workflow 沒有上傳 output.json。學員在 Actions 頁面上看不到「掛在哪一條」。
 #
 # 掃描器的兩個細節（都被 tests/test_local_eval_asserts.py 實際驗證過）：
 #   1. 只有進入某個候選物件（depth > 0）之後才追蹤字串狀態。否則物件「之前」
