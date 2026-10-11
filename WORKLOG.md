@@ -240,10 +240,12 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10～11（互動 session：第 11–13 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–14 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
-  `origin/main` 的整份 diff 無意見；以下是 Claude reviewer 與主審實測找到的。
+  `origin/main` 的整份 diff 跑了兩次（第 11、14 輪）都無意見；以下是 Claude
+  reviewer 與主審實測找到的。輪次對照：㉓–㉖ 第 11 輪、㉗ 第 12 輪、㉘ 第 13 輪、
+  ㉙–㉛ 第 14 輪（Opus tracer；它另把 ㉓–㉘ 的實測敘述逐條重跑，全部重現）。
 - ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
   為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
   「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json
@@ -265,6 +267,22 @@
   42 passed（紅的都在 `test_eval_summary.py`，要解 node 印出的中文），補上
   `encoding="utf-8"` 後 59 passed。Windows 中文版（cp950）是同一條路徑，
   **但沒有在 Windows 上實跑**。
+- ㉙ **學員照 lab2 README 加第 4 題會把主線弄紅**。README 引導「想讓小模型也考
+  你那題，把它一併加進 `tests.small.yaml`」，但 `test_extracted_three_assertion_bodies`
+  釘死「剛好 3 段」，掃描器一致性那條也對每一段都要求有掃描器。照現有三題的
+  `value: |` 寫法加一題 → lint-test 紅，golden-eval 與 deploy-gate 都 `needs:` 它。
+  改成「至少 3 段、只比前三段」。回驗：加第 4 題 → 綠；把第 3 題改成單行
+  `value:`（只剩 2 段）→ 紅；只改第 2 份掃描器 → 紅。
+- ㉚ **摘要每次都印寫死的「主線 golden 軌為 6 題」**，而 lab2 第 4 步就是要學員在
+  `tests.yaml` 加題——加完之後學員自己 repo 的摘要仍說 6 題。`summarize_eval.js`
+  不讀 `tests.yaml`，改成不報數字（「主線 golden 軌的題目在 tests.yaml」）；
+  `test_eval_summary.py` 原本為了那句寫死的話要先剔字串再檢查，一併拿掉。
+  README／docs／workflow 註解裡對範本的靜態描述「6 題」沒有動。
+- ㉛ **fixture 重產步驟會留下一個佔住 11434 的假 Ollama**。`fake_ollama.py` 是
+  `serve_forever()`，README 與檔頭都只寫 `… &`，沒有任何一步收掉它；機器上若本來
+  有真 Ollama，假的綁不上、promptfoo 會打到真的，步驟也沒有檢查。補上先探埠、
+  記 PID、確認回的是 `{"models": []}`、產完 `kill`。新步驟裡「起→探→kill」那段
+  在本機實跑過（kill 後埠關閉）；整段重產 fixture 沒有重跑。
 - 本條目寫下時全套 pytest 87 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
 - ㉘ **「逐題看掛在契約還是語意斷言」在 Actions 頁面上做不到**（第 13 輪，反方
   論證視角）。`.claude/skills/local-eval/SKILL.md` 第 4 步這樣引導，㉓ 改寫的

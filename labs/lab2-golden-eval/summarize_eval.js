@@ -177,11 +177,11 @@ function summarize(path) {
     const scope = `${questions} 題小樣卷${providerScope}${
       multi ? `，共 ${rows.length} 筆結果` : ''
     }`;
-    lines.push(`- 考的是 golden 題庫的 ${scope}（主線 golden 軌為 6 題）`);
+    lines.push(`- 考的是 golden 題庫的 ${scope}（主線 golden 軌的題目在 tests.yaml）`);
   } else {
     lines.push(
       `- 考的是 golden 題庫的小樣卷${providerScope}，共 ${rows.length} 筆結果；` +
-        'promptfoo 這次的結果列沒有 testIdx，**無法回推題數**（主線 golden 軌為 6 題）',
+        'promptfoo 這次的結果列沒有 testIdx，**無法回推題數**（主線 golden 軌的題目在 tests.yaml）',
     );
   }
   if (!questionsKnown) {

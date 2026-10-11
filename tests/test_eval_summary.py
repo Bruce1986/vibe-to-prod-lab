@@ -264,18 +264,15 @@ def test_missing_testidx_is_reported_as_unknown_not_as_a_question_count(tmp_path
     target.write_text(json.dumps(data), encoding="utf-8")
     summary = run_summary(target)
 
-    # 只禁「把 6 當成本次題數」的那兩種說法。**不能寫成 `"6 題" not in summary`**：
-    # 「（主線 golden 軌為 6 題）」是寫死的固定事實、永遠都在，那樣寫會讓這條
-    # 測試變成恆紅（實測就是這樣紅的），而且紅的理由跟它要守的事無關。
     # **用語意斷言而不是挑幾個字串比對**：字串版只擋得住「我剛好想到的那幾種
     # 措辭」。實測把對照組那行改寫成「歷史考的是 3 題，這次考了 ${questions} 題」，
     # 字串版 81 passed 全綠，而摘要兩行內自相矛盾（上一行說無法回推、下一行報 6 題）。
-    # 改成：摘要裡出現的每一個「N 題」，都不可以等於列數——唯一的例外是寫死的
-    # 「主線 golden 軌為 6 題」，它是固定事實、與本次無關，所以先剔掉再檢查。
+    # 改成：摘要裡出現的每一個「N 題」，都不可以等於列數。（摘要曾經寫死一句
+    # 「主線 golden 軌為 6 題」，得先剔掉才能這樣檢查；那句已經拿掉——學員照 lab2
+    # 第 4 步在 tests.yaml 加題之後，它在學員自己的 repo 裡就不是事實了。）
     assert "無法回推題數" in summary, f"沒有講明題數回推不出來：\n{summary}"
     assert "共 6 筆結果" in summary, "列數是實際數得出來的，仍應照報"
-    stripped = summary.replace("（主線 golden 軌為 6 題）", "")
-    claimed = [int(n) for n in re.findall(r"(\d+) 題", stripped)]
+    claimed = [int(n) for n in re.findall(r"(\d+) 題", summary)]
     assert len(doubled) not in claimed, (
         f"題數回推不出來時，摘要不可以出現等於列數（{len(doubled)}）的題數宣稱，"
         f"實得 {claimed}：\n{summary}"

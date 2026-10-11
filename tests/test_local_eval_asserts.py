@@ -140,10 +140,19 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_extracted_three_assertion_bodies():
-    """剖析器本身要先站得住：抓不到 3 段就代表下面的案例根本沒在測東西。"""
+    """剖析器本身要先站得住：抓不到 3 段就代表下面的案例根本沒在測東西。
+
+    只要求「至少 3 段」而不是「剛好 3 段」：lab2 README 引導學員把自己的題目
+    也加進 tests.small.yaml，照現有三題的 `value: |` 寫法加第 4 題是正當操作，
+    不該讓 lint-test（連帶 golden-eval 與 deploy-gate）變紅。CASES 只考前三段，
+    多出來的段落不在本檔的守備範圍。
+    """
     bodies = _assert_bodies()
-    assert len(bodies) == 3, f"預期從 tests.small.yaml 取出 3 段斷言，實際 {len(bodies)} 段"
-    for body in bodies:
+    assert len(bodies) >= 3, (
+        f"預期從 tests.small.yaml 取出至少 3 段斷言，實際 {len(bodies)} 段——"
+        "原本三題的 `value: |` 寫法被改掉了？"
+    )
+    for body in bodies[:3]:
         assert "return" in body
 
 
@@ -155,7 +164,8 @@ def test_three_scanners_stay_byte_identical():
     這條把契約釘成守門——真要精簡成共用檔（見 tests.small.yaml 的註解）時，
     這條也會紅，提醒你回來一起改。
     """
-    prefixes = [body.split("let obj = null;")[0] for body in _assert_bodies()]
+    # 只比原本那三段：學員自己加的題目不一定用這段掃描器。
+    prefixes = [body.split("let obj = null;")[0] for body in _assert_bodies()[:3]]
     assert all("cands.push" in prefix for prefix in prefixes), (
         "抓不到掃描器那一截——tests.small.yaml 的寫法變了，這條測試已對不上"
     )

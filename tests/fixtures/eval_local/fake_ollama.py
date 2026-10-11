@@ -5,9 +5,12 @@
 「daemon 還活著嗎」那道檢查會通過），`/api/chat` 回 404 model not found。
 在這個狀態下 promptfoo 仍會正常結束並寫出完全合法的 output.json。
 
-用法（重產 fixture 的完整步驟見同目錄 README.md）：
+用法（重產 fixture 的完整步驟見同目錄 README.md）。它綁 Ollama 的預設埠、
+不會自己結束，用完要以 PID 收掉：
 
-    python3 tests/fixtures/eval_local/fake_ollama.py &
+    python3 tests/fixtures/eval_local/fake_ollama.py & FAKE=$!
+    ...
+    kill "$FAKE"
 """
 
 import json

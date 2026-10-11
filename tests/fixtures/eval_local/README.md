@@ -26,10 +26,17 @@ cp labs/lab2-golden-eval/{promptfooconfig.local.yaml,tests.small.yaml,mock_provi
 cd "$TMP/pfprobe" && npm install promptfoo@0.121.19
 
 # 1) output_provider_error.json —— daemon 活著、模型沒作答
+#    假 Ollama 綁 127.0.0.1:11434（Ollama 的預設埠）而且不會自己結束：
+#    先確認埠沒人用（有真 Ollama 在跑就先停掉，否則假的綁不上、下面會打到真的），
+#    記下 PID，產完這一份立刻收掉。
+curl -s localhost:11434/api/tags && echo "← 11434 已經有人在聽，先處理再往下"
 python3 <此目錄>/fake_ollama.py &          # /api/tags 回 200、/api/chat 回 404
+FAKE=$!
+curl -s localhost:11434/api/tags           # 應回 {"models": []}——確認打到的是假的
 cd "$TMP/pfprobe/labs/lab2-golden-eval"
 npx promptfoo eval -c promptfooconfig.local.yaml --no-progress-bar -o output.json
 # → exit 100、output.json 合法、三筆 output 皆空、stats.errors=0
+kill "$FAKE"                               # 不收掉會一直佔著 11434
 
 # 2) output_answered.json —— 真的有作答（用 repo 自己的 mock provider 回放）
 #    把 promptfooconfig.local.yaml 的 providers 整段換成
