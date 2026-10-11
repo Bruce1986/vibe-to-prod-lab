@@ -213,7 +213,8 @@
 ### 2026-09-24（排程班第 10 輪：clean pass 確認，＋兩條學員路徑的缺口）
 
 - 本輪的指定任務是 clean pass 確認，不是再開新改動。對第 9 輪的八項宣稱逐一
-  做突變複驗，**七項完全成立、無迴歸**：`uses:` 正則（整行註解→紅；雙引號／
+  做突變複驗，**七項完全成立、無迴歸**〔2026-10-11 更正：其中 `multi` 那一項
+  事後查出不成立，實為六項，見該項的括號與 ㉟〕：`uses:` 正則（整行註解→紅；雙引號／
   單引號／無空白／改縮排／行內註解→全綠，即假紅已關）、`providersKnown` 新
   守門（退回 `providers>1` → 1 failed）、`multi` 改用 `rows.length !== questions`
   （單 provider＋repeat 2 會印出「共 6 筆結果」〔**2026-10-11 更正：對 promptfoo 實跑的
@@ -241,16 +242,17 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10～11（互動 session：第 11–18 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–19 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
-  `origin/main` 的整份 diff 跑了兩次（第 11、14 輪）都無意見；以下是 Claude
+  `origin/main` 的整份 diff 完整跑了三次（第 11、14、19 輪）都無意見；以下是 Claude
   reviewer 與主審實測找到的。輪次對照：㉓–㉖ 第 11 輪、㉗ 第 12 輪、㉘ 第 13 輪、
   ㉙–㉛ 第 14 輪（Opus tracer；它另把 ㉓–㉘ 的實測敘述逐條重跑，全部重現）。
   第 15 輪沒有新條目，是回頭修 ㉙ 與 ㉛ 在第 14 輪修得不完整的地方（寫在該兩條內）。
   ㉜–㉞ 第 16 輪（另有一處 ㉙ 的補修，同樣寫在 ㉙ 內）。第 17 輪只改了 ㉝ 的一句兜底訊息。
   ㉟–㊱ 第 18 輪（第二次 Opus tracer；它把 ㉙–㉞ 的回驗逐條重跑，全部重現）。
   Codex 第 18 輪撞到用量上限沒有跑完，不算一次審查。
+  第 19 輪只改本檔的三處敘述（第 10 輪條目的合計、㉝ 的句子結構、下方清單的一條）。
 - ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
   為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
   「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json
@@ -272,6 +274,16 @@
   42 passed（紅的都在 `test_eval_summary.py`，要解 node 印出的中文），補上
   `encoding="utf-8"` 後 59 passed。Windows 中文版（cp950）是同一條路徑，
   **但沒有在 Windows 上實跑**。
+- ㉘ **「逐題看掛在契約還是語意斷言」在 Actions 頁面上做不到**（第 13 輪，反方
+  論證視角）。`.claude/skills/local-eval/SKILL.md` 第 4 步這樣引導，㉓ 改寫的
+  檔頭原本也拿它當掃描器的用途。實跑 promptfoo 0.121.19（workflow 同樣的
+  `--no-progress-bar -o output.json`）：job log 的表格每題只有 `[PASS]`／`[FAIL]`
+  加模型原始輸出，不印是哪一條斷言掛；`summarize_eval.js` 只報總分；workflow
+  沒有上傳 `output.json`。逐條結果只在 runner 上那份 `output.json` 裡，run 結束
+  就沒了。本輪只把 `tests.small.yaml` 檔頭改成如實描述，**機制沒有補**——要補
+  有兩條路，都是新功能，留給 owner 決定：(a) `summarize_eval.js` 多印一段逐題
+  明細（讀 `gradingResult.componentResults`，要一併補測試）；(b) workflow 用
+  `actions/upload-artifact` 上傳 `output.json`。SKILL.md 那一步在補之前照做不到。
 - ㉙ **學員照 lab2 README 加第 4 題會把主線弄紅**。README 引導「想讓小模型也考
   你那題，把它一併加進 `tests.small.yaml`」，但 `test_extracted_three_assertion_bodies`
   釘死「剛好 3 段」，掃描器一致性那條也對每一段都要求有掃描器。照現有三題的
@@ -308,13 +320,14 @@
   → 仍報基礎設施故障、step 100。
 - ㉝ **判讀程式非零結束會吃掉 promptfoo 的離開碼**。`node summarize_eval.js …`
   在 `bash -e` 下失敗會當場中止，`exit "$EXIT"` 走不到，step 以 node 的離開碼
-  結束。兩邊都補：workflow 那行加 `|| echo "::warning::…"`；`summarize_eval.js`
-  的進入點包 try/catch，丟例外時印「未完成——判讀程式自己出錯」並照樣以 0
-  結束（兜底訊息初版寫「讀 output.json 時丟出例外」，第 17 輪 reviewer 指出讀檔
-  失敗在 `readResults` 就接住了、走不到這裡，已改成「處理內容時」；檔頭本來就宣稱一律以 0 結束，原本並不成立——`testIdx` 是 `toString`
-  不可呼叫的物件時 `String(key)` 會丟 TypeError；promptfoo 正常不會寫出這種值）。
+  結束。而檔頭宣稱的「一律以 0 結束」原本並不成立：`testIdx` 是 `toString` 不可
+  呼叫的物件時 `String(key)` 會丟 TypeError（promptfoo 正常不會寫出這種值）。
+  兩邊都補：workflow 那行加 `|| echo "::warning::…"`；`summarize_eval.js` 的
+  進入點包 try/catch，丟例外時印「未完成——判讀程式自己出錯」並照樣以 0 結束。
   新增 `test_summarizer_crash_is_reported_not_swallowed`，拿掉 try/catch → 它紅。
   回驗：`100＋node 非零` → step 100 並有 warning；`0＋node 非零` → step 0。
+  （兜底訊息初版寫「讀 output.json 時丟出例外」，第 17 輪 reviewer 指出讀檔失敗在
+  `readResults` 就接住了、走不到這裡，已改成「處理內容時」。）
 - ㉞ **promptfoo 以 0／100 以外的離開碼結束、卻留有讀得動的 output.json 時，
   摘要照樣寫「完成」**。在摘要前面多印一行警告。**沒有查證真實的 promptfoo 會
   不會在崩潰前留下這種檔案**——這是照離開碼語意加的防禦，0 與 100 這兩個值
@@ -337,23 +350,15 @@
   沒有重現）；離開碼警告的「下面的結果」改成「下面的判讀」；註解的「三種原因」
   補上逾時另外處理。
 - 本條目寫下時全套 pytest 88 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
-- ㉘ **「逐題看掛在契約還是語意斷言」在 Actions 頁面上做不到**（第 13 輪，反方
-  論證視角）。`.claude/skills/local-eval/SKILL.md` 第 4 步這樣引導，㉓ 改寫的
-  檔頭原本也拿它當掃描器的用途。實跑 promptfoo 0.121.19（workflow 同樣的
-  `--no-progress-bar -o output.json`）：job log 的表格每題只有 `[PASS]`／`[FAIL]`
-  加模型原始輸出，不印是哪一條斷言掛；`summarize_eval.js` 只報總分；workflow
-  沒有上傳 `output.json`。逐條結果只在 runner 上那份 `output.json` 裡，run 結束
-  就沒了。本輪只把 `tests.small.yaml` 檔頭改成如實描述，**機制沒有補**——要補
-  有兩條路，都是新功能，留給 owner 決定：(a) `summarize_eval.js` 多印一段逐題
-  明細（讀 `gradingResult.componentResults`，要一併補測試）；(b) workflow 用
-  `actions/upload-artifact` 上傳 `output.json`。SKILL.md 那一步在補之前照做不到。
 - 查過但沒有修、留給 owner 判斷值不值得：
   - 掃描器遇到深度 0 的未閉合 `{`（例如散文「格式 { 如下：」）之後收不到任何
     候選，語意斷言會判 Fail。依 ㉓ 那種輸出整題本來就 Fail，只影響明細。
   - `test_workflow_calls_the_summarizer` 是子字串比對：把呼叫改成 `echo node …`、
     拿掉 `|| EXIT=$?` 或 `exit "$EXIT"`，測試都不會紅（reviewer 突變實測）。
-  - `summarize_eval.js` 有幾個分支沒有斷言守著（純空白輸出、`診斷：` 那行、
-    provider 只有 id 沒有 label 等，同一位 reviewer 的突變實測）。
+  - `summarize_eval.js` 有幾個分支沒有斷言守著（純空白輸出、讀不到結果檔那條
+    路徑的 `診斷：` 那行、provider 只有 id 沒有 label 等，第 11 輪同一位 reviewer
+    的突變實測；㉝ 新增的兜底路徑的 `診斷：` 則有斷言）。
+  - `--repeat` 下題數會被高估（㉟）。
   - `.claude/skills/local-eval/SKILL.md` 仍寫「同一份考卷拿 3/3」而沒有但書
     （owner 先前指示該檔不動）。
   - main 在本分支之後替單元一投影片加了一頁，狀態表的「13／18／12 張」合併後
