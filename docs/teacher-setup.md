@@ -29,7 +29,14 @@
       **eval-local**（Ollama qwen2.5:1.5b 跑在 runner 上，零 token 零費用；
       2026-07-16 實測：全程約 3 分鐘、1/3 通過——幻覺誘餌上當＋模糊輸入
       瞎猜，「紅色也是資訊」內建）
-- [ ] eval-local 課前一週複測（qwen2.5:1.5b 分數會小幅浮動，屬預期）
+- [ ] eval-local **首次在 Actions 上實跑驗收**：上面那次 07-16 的實測跑的是 PoC
+      分支的早期版本；現行的 `eval-local.yml`（落地再執行的安裝、從 config 解析
+      模型名、`timeout 480`、分層的 step summary、`summarize_eval.js`）之後只在
+      本機用替身指令與 fixture 驗過，**還沒有在 GitHub Actions 上跑過**（它只有
+      `workflow_dispatch`，要合併進預設分支後才觸發得了）。第一次跑請確認：
+      四個步驟紅綠落在預期的那一步、job summary 有出現且標題是「eval-local 完成」
+      並帶本次成績與正確的模型名；記下實際耗時，回頭訂正 `docs/02-llm-quality.md`
+      的「約 3 分鐘」。之後課前一週再複測一次（qwen2.5:1.5b 分數會小幅浮動，屬預期）
 - [ ] （選配）講師 key 的雲端對照 demo：promptfoo `openai:gpt-4o-mini`
       provider＋自備 key，課堂示範「同卷強模型 3/3」的對照組（成本幾美分）
 - [ ] HHEM／LettuceDetect 模型在講師機預下載快取；MiniCheck 770M CPU

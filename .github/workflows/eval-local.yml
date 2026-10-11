@@ -100,7 +100,7 @@ jobs:
           EXIT=0
           timeout 480 npx -y promptfoo@0.121.19 eval -c promptfooconfig.local.yaml \
             --no-progress-bar -o output.json || EXIT=$?
-          # 評測非零有三種意義完全不同的原因，摘要不能混為一談：
+          # 逾時（124）另外處理；其餘的評測非零有三種意義完全不同的原因，摘要不能混為一談：
           #   1. Ollama 半路死掉        → 基礎設施故障
           #   2. 模型沒有真的作答       → 執行期／設定錯誤（模型沒拉到、OOM、請求被拒）
           #   3. 以上皆非              → 模型答錯，預期內的教學訊號
@@ -116,7 +116,7 @@ jobs:
               echo "這一次的紅**不能**當成「小模型答錯」，請重跑；若經常逾時，請同時"
               echo "調高上面的 \`timeout 480\`、本步驟的 timeout-minutes 與 job 層的 timeout-minutes。"
             } >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$EXIT" != "0" ] && ! curl -sf http://localhost:11434/api/tags > /dev/null; then
+          elif [ "$EXIT" != "0" ] && ! curl -sf --max-time 10 http://localhost:11434/api/tags > /dev/null; then
             # 只在評測非零時才探測：全過（0）代表每一題都拿到答案也都通過了，
             # daemon 事後是死是活不影響結果——那時還印「未完成」，step 卻是綠的。
             {
@@ -131,7 +131,7 @@ jobs:
             if [ "$EXIT" != "0" ] && [ "$EXIT" != "100" ]; then
               {
                 echo "> ⚠️ promptfoo 以離開碼 $EXIT 結束（全過是 0、有題目沒過是 100）。"
-                echo "> 這次評測可能沒有正常跑完，下面的結果僅供參考。"
+                echo "> 這次評測可能沒有正常跑完，下面的判讀僅供參考。"
                 echo ""
               } >> "$GITHUB_STEP_SUMMARY"
             fi

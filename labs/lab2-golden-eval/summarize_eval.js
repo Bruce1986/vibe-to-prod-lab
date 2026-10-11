@@ -168,10 +168,14 @@ function summarize(path) {
       ? ` ×${providers} 個 provider`
       : ''
     : ' ×未知數量的 provider';
-  // 判準是「列數與題數對不上就要把列數講出來」，不是「有沒有多個 provider」。
-  // 單一 provider 跑 `--repeat 2` 時 3 題會產生 6 列，舊判準（providers > 1）
-  // 把列數整個藏起來，畫面變成「3 題小樣卷」＋「本次成績 6/6」——讀者看到的是
-  // 一份 3 題考卷拿了 6 分，正是本檔要防的那種誤讀的鏡像。
+  // 判準是「列數與題數對不上就要把列數講出來」，不是「有沒有多個 provider」：
+  // 同一個 testIdx 出現不只一列、provider 卻只數得到一個時，只看 providers > 1
+  // 會把列數藏起來，畫面變成「3 題小樣卷」＋「本次成績 6/6」。
+  // **這條管不到 `--repeat`**（這段註解原本以它為例，是錯的）：promptfoo 0.121.19
+  // 實跑 `--repeat 2`，6 列的 testIdx 是 0..5——每次重複都拿到新編號——所以本檔會
+  // 把它算成 6 題、印「6 題小樣卷」，不會印「共 6 筆結果」。光靠 testIdx 分不出
+  // 「同一題重考」與「不同的題」。workflow 沒有用 --repeat；自己加上去的話，
+  // 摘要的題數會被高估。
   const multi = !providersKnown || providers > 1 || rows.length !== questions;
   if (questionsKnown) {
     const scope = `${questions} 題小樣卷${providerScope}${

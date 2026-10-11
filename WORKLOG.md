@@ -216,8 +216,9 @@
   做突變複驗，**七項完全成立、無迴歸**：`uses:` 正則（整行註解→紅；雙引號／
   單引號／無空白／改縮排／行內註解→全綠，即假紅已關）、`providersKnown` 新
   守門（退回 `providers>1` → 1 failed）、`multi` 改用 `rows.length !== questions`
-  （單 provider＋repeat 2 會印出「共 6 筆結果」；單 provider 單次仍不多印，
-  沒有新假紅）、三份掃描器的跳脫案例（只砍第 1／第 2／第 3 份各自都紅）、
+  （單 provider＋repeat 2 會印出「共 6 筆結果」〔**2026-10-11 更正：對 promptfoo 實跑的
+  `--repeat 2` 輸出，這句不成立，見 ㉟**〕；單 provider
+  單次仍不多印，沒有新假紅）、三份掃描器的跳脫案例（只砍第 1／第 2／第 3 份各自都紅）、
   WORKLOG 與 docstring 的「實測」字樣已撤且無第三處殘留、AGENTS.md 出處已改
   成不指名、`docs/case-studies.md` 與本檔狀態表的措辭一致且全 repo 無第三處
   還寫「定稿」。第 8 輪對 `a008d2b` 的誤判也再次複驗屬實（`a008d2b~1` 查無此
@@ -240,7 +241,7 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10～11（互動 session：第 11–17 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–18 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
   `origin/main` 的整份 diff 跑了兩次（第 11、14 輪）都無意見；以下是 Claude
@@ -248,6 +249,8 @@
   ㉙–㉛ 第 14 輪（Opus tracer；它另把 ㉓–㉘ 的實測敘述逐條重跑，全部重現）。
   第 15 輪沒有新條目，是回頭修 ㉙ 與 ㉛ 在第 14 輪修得不完整的地方（寫在該兩條內）。
   ㉜–㉞ 第 16 輪（另有一處 ㉙ 的補修，同樣寫在 ㉙ 內）。第 17 輪只改了 ㉝ 的一句兜底訊息。
+  ㉟–㊱ 第 18 輪（第二次 Opus tracer；它把 ㉙–㉞ 的回驗逐條重跑，全部重現）。
+  Codex 第 18 輪撞到用量上限沒有跑完，不算一次審查。
 - ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
   為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
   「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json
@@ -316,6 +319,23 @@
   摘要照樣寫「完成」**。在摘要前面多印一行警告。**沒有查證真實的 promptfoo 會
   不會在崩潰前留下這種檔案**——這是照離開碼語意加的防禦，0 與 100 這兩個值
   則是本次實跑看到的（全過 0、有題目沒過 100）。
+- ㉟ **摘要對 `--repeat` 的說法是錯的，而且錯了兩輪**。`summarize_eval.js` 的註解
+  說 `rows.length !== questions` 這個判準是為了「單一 provider 跑 `--repeat 2`」，
+  本檔第 10 輪條目還把「會印出共 6 筆結果」列為複驗成立。promptfoo 0.121.19 實跑
+  `--repeat 2`（mock provider）：6 列的 testIdx 是 `0,1,2,3,4,5`，摘要印「6 題
+  小樣卷」「本次是 6 題」，沒有「共 6 筆結果」。判準對它宣稱要守的情境不生效。
+  本輪**只更正文字**（該註解、第 10 輪條目加註），行為沒有改——workflow 沒有用
+  `--repeat`。真要守得用題目本身去重並補一份 `--repeat` 實跑的 fixture，留給 owner。
+- ㊱ **現行的 `eval-local.yml` 沒有在 GitHub Actions 上跑過**。`gh run list
+  --workflow eval-local.yml` 只有兩筆，都是 2026-07-16 `poc/ollama-eval` 分支 push
+  觸發的 PoC 版（兩筆的 conclusion 都是 failure）；現行檔只有 `workflow_dispatch`、
+  不在 main 上，合併前觸發不了。`docs/teacher-setup.md` 的課前清單原本只寫「課前
+  一週複測」，讀起來像已經測過；改成「首次在 Actions 上實跑驗收」並列出要看什麼。
+  **合併後第一件事就是手動跑一次。**
+- 第 18 輪順手改的三處小地方：最後一步探測 daemon 的 `curl` 加 `--max-time 10`
+  （daemon 接了連線卻不回應時原本會卡到 step 上限，摘要整段消失——這是讀碼推論，
+  沒有重現）；離開碼警告的「下面的結果」改成「下面的判讀」；註解的「三種原因」
+  補上逾時另外處理。
 - 本條目寫下時全套 pytest 88 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
 - ㉘ **「逐題看掛在契約還是語意斷言」在 Actions 頁面上做不到**（第 13 輪，反方
   論證視角）。`.claude/skills/local-eval/SKILL.md` 第 4 步這樣引導，㉓ 改寫的
