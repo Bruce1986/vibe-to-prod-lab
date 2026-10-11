@@ -114,7 +114,7 @@ function summarize(path) {
     lines.push('');
     lines.push(`診斷：${parsed.detail}`);
     lines.push('');
-    lines.push('請看上方 promptfoo 的錯誤輸出，**不要**把這次的紅當成模型品質訊號。');
+    lines.push('請到 job log 看 promptfoo 那一步的錯誤輸出，**不要**把這次的紅當成模型品質訊號。');
     return lines.join('\n');
   }
 

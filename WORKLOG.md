@@ -242,7 +242,7 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10～11（互動 session：第 11–19 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–21 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
   `origin/main` 的整份 diff 完整跑了三次（第 11、14、19 輪）都無意見；以下是 Claude
@@ -253,6 +253,9 @@
   ㉟–㊱ 第 18 輪（第二次 Opus tracer；它把 ㉙–㉞ 的回驗逐條重跑，全部重現）。
   Codex 第 18 輪撞到用量上限沒有跑完，不算一次審查。
   第 19 輪只改本檔的三處敘述（第 10 輪條目的合計、㉝ 的句子結構、下方清單的一條）。
+  第 20 輪是確認輪，無發現。第 21 輪改了兩句摘要文字：它們叫讀者看「上方」的
+  promptfoo 輸出、調「上面的」timeout，但 step summary 頁面上方沒有那些東西，
+  改成指名 job log 與 `eval-local.yml`。
 - ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
   為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
   「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json

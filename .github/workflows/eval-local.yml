@@ -114,7 +114,7 @@ jobs:
               echo ""
               echo "promptfoo 在 8 分鐘內沒有跑完（runner 的 CPU 較慢，或推論卡住）。"
               echo "這一次的紅**不能**當成「小模型答錯」，請重跑；若經常逾時，請同時"
-              echo "調高上面的 \`timeout 480\`、本步驟的 timeout-minutes 與 job 層的 timeout-minutes。"
+              echo "調高 eval-local.yml 裡的 \`timeout 480\`、該步驟的 timeout-minutes 與 job 層的 timeout-minutes。"
             } >> "$GITHUB_STEP_SUMMARY"
           elif [ "$EXIT" != "0" ] && ! curl -sf --max-time 10 http://localhost:11434/api/tags > /dev/null; then
             # 只在評測非零時才探測：全過（0）代表每一題都拿到答案也都通過了，
