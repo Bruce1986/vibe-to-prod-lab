@@ -240,14 +240,14 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10～11（互動 session：第 11–16 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–17 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
   `origin/main` 的整份 diff 跑了兩次（第 11、14 輪）都無意見；以下是 Claude
   reviewer 與主審實測找到的。輪次對照：㉓–㉖ 第 11 輪、㉗ 第 12 輪、㉘ 第 13 輪、
   ㉙–㉛ 第 14 輪（Opus tracer；它另把 ㉓–㉘ 的實測敘述逐條重跑，全部重現）。
   第 15 輪沒有新條目，是回頭修 ㉙ 與 ㉛ 在第 14 輪修得不完整的地方（寫在該兩條內）。
-  ㉜–㉞ 第 16 輪（另有一處 ㉙ 的補修，同樣寫在 ㉙ 內）。
+  ㉜–㉞ 第 16 輪（另有一處 ㉙ 的補修，同樣寫在 ㉙ 內）。第 17 輪只改了 ㉝ 的一句兜底訊息。
 - ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
   為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
   「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json
@@ -307,7 +307,8 @@
   在 `bash -e` 下失敗會當場中止，`exit "$EXIT"` 走不到，step 以 node 的離開碼
   結束。兩邊都補：workflow 那行加 `|| echo "::warning::…"`；`summarize_eval.js`
   的進入點包 try/catch，丟例外時印「未完成——判讀程式自己出錯」並照樣以 0
-  結束（檔頭本來就宣稱一律以 0 結束，原本並不成立——`testIdx` 是 `toString`
+  結束（兜底訊息初版寫「讀 output.json 時丟出例外」，第 17 輪 reviewer 指出讀檔
+  失敗在 `readResults` 就接住了、走不到這裡，已改成「處理內容時」；檔頭本來就宣稱一律以 0 結束，原本並不成立——`testIdx` 是 `toString`
   不可呼叫的物件時 `String(key)` 會丟 TypeError；promptfoo 正常不會寫出這種值）。
   新增 `test_summarizer_crash_is_reported_not_swallowed`，拿掉 try/catch → 它紅。
   回驗：`100＋node 非零` → step 100 並有 warning；`0＋node 非零` → step 0。

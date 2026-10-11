@@ -212,8 +212,11 @@ if (require.main === module) {
     text = [
       '### ⚠️ eval-local 未完成——判讀程式自己出錯，不是模型品質訊號',
       '',
-      `summarize_eval.js 讀 ${OUTPUT_PATH} 時丟出例外，沒有算出成績。`,
-      '這一次的結果**不要**當成「小模型答錯」來解讀。',
+      // 讀檔與 JSON 解析的失敗在 readResults 裡就接住了，走不到這裡；會到這裡的
+      // 是「檔案讀得動、但處理內容時出錯」，同一份檔案重跑判讀只會得到同一個例外。
+      `summarize_eval.js 處理 ${OUTPUT_PATH} 的內容時丟出例外，沒有算出成績。`,
+      '這一次的結果**不要**當成「小模型答錯」來解讀。這多半是判讀程式的 bug，',
+      '或 output.json 的結構不是它預期的樣子；請把下面這行診斷連同 job log 回報。',
       '',
       `診斷：${e && e.message ? e.message : String(e)}`,
     ].join('\n');
