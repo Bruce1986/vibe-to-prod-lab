@@ -242,7 +242,7 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10～11（互動 session：第 11–21 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–22 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
   `origin/main` 的整份 diff 完整跑了三次（第 11、14、19 輪）都無意見；以下是 Claude
@@ -256,6 +256,7 @@
   第 20 輪是確認輪，無發現。第 21 輪改了兩句摘要文字：它們叫讀者看「上方」的
   promptfoo 輸出、調「上面的」timeout，但 step summary 頁面上方沒有那些東西，
   改成指名 job log 與 `eval-local.yml`。
+  ㊲ 第 22 輪（第三次 Opus tracer；31 個突變，沒有清單以外值得修的新缺口）。
 - ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
   為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
   「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json
@@ -352,6 +353,12 @@
   （daemon 接了連線卻不回應時原本會卡到 step 上限，摘要整段消失——這是讀碼推論，
   沒有重現）；離開碼警告的「下面的結果」改成「下面的判讀」；註解的「三種原因」
   補上逾時另外處理。
+- ㊲ （第 22 輪，Opus tracer）**Actions 預設的 shell 是 `bash -e`，不是
+  `bash -eo pipefail`**：未寫 `shell:` 時沒有 pipefail（07-16 那次 PoC run 的 log
+  印的是 `shell: /usr/bin/bash -e {0}`）。`eval-local.yml` 拉模型那步的註解、本檔
+  09-11 條目裡同一段「實測」、以及上面 ㉜ 前的說明都以 pipefail 為前提。註解已
+  改寫；先檢查檔案存在的守門在兩種 shell 下都正確，行為沒有改。tracer 另在
+  `bash -e` 下重跑最後一步的九種組合，結果與 ㉜–㉞ 記的相同。09-11 條目未逐字更正。
 - 本條目寫下時全套 pytest 88 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
 - 查過但沒有修、留給 owner 判斷值不值得：
   - 掃描器遇到深度 0 的未閉合 `{`（例如散文「格式 { 如下：」）之後收不到任何
