@@ -136,7 +136,11 @@ def _all_assert_bodies():
                 continue
             bodies.append((description, "\n".join(current)))
             current, indent = None, None
-        if raw.startswith("- description:"):
+        # 行首的 `- ` 是新的一題：先把題名清掉，免得沒有 description（或
+        # description 不是第一個鍵）的題目，斷言被記到上一題名下。
+        if raw.startswith("- "):
+            description = None
+        if raw.startswith(("- description:", "  description:")):
             description = raw.split(":", 1)[1].strip()
         if raw.strip() == "value: |":
             current, indent = [], len(raw) - len(raw.lstrip()) + 2

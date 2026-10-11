@@ -240,13 +240,14 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10～11（互動 session：第 11–15 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–16 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
   `origin/main` 的整份 diff 跑了兩次（第 11、14 輪）都無意見；以下是 Claude
   reviewer 與主審實測找到的。輪次對照：㉓–㉖ 第 11 輪、㉗ 第 12 輪、㉘ 第 13 輪、
   ㉙–㉛ 第 14 輪（Opus tracer；它另把 ㉓–㉘ 的實測敘述逐條重跑，全部重現）。
   第 15 輪沒有新條目，是回頭修 ㉙ 與 ㉛ 在第 14 輪修得不完整的地方（寫在該兩條內）。
+  ㉜–㉞ 第 16 輪（另有一處 ㉙ 的補修，同樣寫在 ㉙ 內）。
 - ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
   為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
   「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json
@@ -277,7 +278,10 @@
   `assert False is True`）。改成用題目的 `description` 認那三題、不看順序。
   回驗：新題加在最前面／第 2、3 題之間／檔尾 → 三種都綠；第 3 題改成單行
   `value:` 或第 2 題改名 → 紅，訊息指名是哪一題；只改第 2 份掃描器 → 紅；
-  ㉕ 的 `toppings[0]` 突變 → 仍紅。
+  ㉕ 的 `toppings[0]` 突變 → 仍紅。第 16 輪再補一處：新題若不是以
+  `- description:` 開頭（例如 `- vars:` 開頭），它的斷言會被記到上一題名下、
+  紅在「該題應恰有一段，實際 2 段」。剖析器改成遇到行首 `- ` 就清掉題名
+  （回驗：檔尾加一題 `- vars:` 開頭的 → 綠）。
 - ㉚ **摘要每次都印寫死的「主線 golden 軌為 6 題」**，而 lab2 第 4 步就是要學員在
   `tests.yaml` 加題——加完之後學員自己 repo 的摘要仍說 6 題。`summarize_eval.js`
   不讀 `tests.yaml`，改成不報數字（「主線 golden 軌的題目在 tests.yaml」）；
@@ -291,7 +295,27 @@
   先 `sleep 1` 再探（否則 `curl -s` 搶在綁埠之前、什麼都不印）；`<此目錄>` 這個
   佔位符在前面已經 `cd` 走之後指不到東西，改成步驟 0 先記下的 `$REPO`。
   這兩處是讀碼改的，改完沒有再實跑。
-- 本條目寫下時全套 pytest 87 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
+- 以下 ㉜–㉞ 都在 `eval-local.yml` 最後一步與 `summarize_eval.js` 的銜接處。驗證
+  方式：把那一步的 `run:` 抽出來，用替身的 `npx`／`curl`／`timeout` 在本機
+  `bash -eo pipefail` 下跑九種組合，看 step 離開碼與 step summary。**這是本機
+  bash 3.2 配替身指令，不是在 GitHub Actions 上實跑。**
+- ㉜ **全過時 daemon 剛好已死，會印「未完成——基礎設施故障」而 step 是綠的**。
+  探測 daemon 那個分支原本對所有非 124 的離開碼都生效，包括 0。改成只在評測
+  非零時才探測。回驗：`0＋daemon 死` → 摘要「完成」、step 0；`100＋daemon 死`
+  → 仍報基礎設施故障、step 100。
+- ㉝ **判讀程式非零結束會吃掉 promptfoo 的離開碼**。`node summarize_eval.js …`
+  在 `bash -e` 下失敗會當場中止，`exit "$EXIT"` 走不到，step 以 node 的離開碼
+  結束。兩邊都補：workflow 那行加 `|| echo "::warning::…"`；`summarize_eval.js`
+  的進入點包 try/catch，丟例外時印「未完成——判讀程式自己出錯」並照樣以 0
+  結束（檔頭本來就宣稱一律以 0 結束，原本並不成立——`testIdx` 是 `toString`
+  不可呼叫的物件時 `String(key)` 會丟 TypeError；promptfoo 正常不會寫出這種值）。
+  新增 `test_summarizer_crash_is_reported_not_swallowed`，拿掉 try/catch → 它紅。
+  回驗：`100＋node 非零` → step 100 並有 warning；`0＋node 非零` → step 0。
+- ㉞ **promptfoo 以 0／100 以外的離開碼結束、卻留有讀得動的 output.json 時，
+  摘要照樣寫「完成」**。在摘要前面多印一行警告。**沒有查證真實的 promptfoo 會
+  不會在崩潰前留下這種檔案**——這是照離開碼語意加的防禦，0 與 100 這兩個值
+  則是本次實跑看到的（全過 0、有題目沒過 100）。
+- 本條目寫下時全套 pytest 88 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
 - ㉘ **「逐題看掛在契約還是語意斷言」在 Actions 頁面上做不到**（第 13 輪，反方
   論證視角）。`.claude/skills/local-eval/SKILL.md` 第 4 步這樣引導，㉓ 改寫的
   檔頭原本也拿它當掃描器的用途。實跑 promptfoo 0.121.19（workflow 同樣的

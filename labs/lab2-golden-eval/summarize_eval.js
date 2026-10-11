@@ -203,7 +203,22 @@ function summarize(path) {
 }
 
 if (require.main === module) {
-  process.stdout.write(`${summarize(OUTPUT_PATH)}\n`);
+  // 檔頭說「一律以 0 結束」：判讀自己丟例外時也要印得出東西，否則 step summary
+  // 一片空白，讀者連「這次不算數」都看不到。
+  let text;
+  try {
+    text = summarize(OUTPUT_PATH);
+  } catch (e) {
+    text = [
+      '### ⚠️ eval-local 未完成——判讀程式自己出錯，不是模型品質訊號',
+      '',
+      `summarize_eval.js 讀 ${OUTPUT_PATH} 時丟出例外，沒有算出成績。`,
+      '這一次的結果**不要**當成「小模型答錯」來解讀。',
+      '',
+      `診斷：${e && e.message ? e.message : String(e)}`,
+    ].join('\n');
+  }
+  process.stdout.write(`${text}\n`);
 }
 
 module.exports = { summarize, answered, readResults };

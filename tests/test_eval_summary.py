@@ -336,6 +336,34 @@ def test_wording_matches_whether_promptfoo_logged_errors(tmp_path):
     assert "記成斷言失敗" not in summary
 
 
+def test_summarizer_crash_is_reported_not_swallowed(tmp_path):
+    """判讀自己丟例外時也要印出『未完成』並以 0 結束（run_summary 會驗離開碼）。
+
+    觸發方式：testIdx 是一個 toString 不可呼叫的物件，`String(key)` 會丟
+    TypeError。promptfoo 正常不會寫出這種值——這條守的是檔頭「一律以 0 結束」
+    那句話，不是某個已知的 promptfoo 行為。
+    """
+    data = {
+        "results": {
+            "results": [
+                {
+                    "testIdx": {"toString": 1},
+                    "response": {"output": '{"status":"ok"}'},
+                    "success": True,
+                }
+            ],
+            "stats": {"errors": 0},
+        }
+    }
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+    assert INCOMPLETE_HEADING in summary
+    assert COMPLETE_HEADING not in summary
+    assert "本次成績" not in summary
+    assert "診斷：" in summary
+
+
 # --- workflow 真的有在用這支程式嗎 -------------------------------------------
 
 

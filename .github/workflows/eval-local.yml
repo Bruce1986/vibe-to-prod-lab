@@ -116,7 +116,9 @@ jobs:
               echo "這一次的紅**不能**當成「小模型答錯」，請重跑；若經常逾時，請同時"
               echo "調高上面的 \`timeout 480\`、本步驟的 timeout-minutes 與 job 層的 timeout-minutes。"
             } >> "$GITHUB_STEP_SUMMARY"
-          elif ! curl -sf http://localhost:11434/api/tags > /dev/null; then
+          elif [ "$EXIT" != "0" ] && ! curl -sf http://localhost:11434/api/tags > /dev/null; then
+            # 只在評測非零時才探測：全過（0）代表每一題都拿到答案也都通過了，
+            # daemon 事後是死是活不影響結果——那時還印「未完成」，step 卻是綠的。
             {
               echo "### ⚠️ eval-local 未完成——基礎設施故障，不是模型品質訊號"
               echo ""
@@ -124,6 +126,18 @@ jobs:
               echo "這一次的紅**不能**當成「小模型答錯」來解讀，請重跑。"
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            node summarize_eval.js output.json >> "$GITHUB_STEP_SUMMARY"
+            # promptfoo 全過是 0、有題目沒過是 100。其他非零值（自己崩潰、被砍）
+            # 之下就算留有讀得動的 output.json，也不能當成一次正常跑完的評測。
+            if [ "$EXIT" != "0" ] && [ "$EXIT" != "100" ]; then
+              {
+                echo "> ⚠️ promptfoo 以離開碼 $EXIT 結束（全過是 0、有題目沒過是 100）。"
+                echo "> 這次評測可能沒有正常跑完，下面的結果僅供參考。"
+                echo ""
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+            # `|| …` 是為了讓下面的 exit "$EXIT" 一定走得到：這裡是 bash -e，
+            # 判讀程式若非零結束會當場中止，step 的離開碼就不再是 promptfoo 的了。
+            node summarize_eval.js output.json >> "$GITHUB_STEP_SUMMARY" \
+              || echo "::warning::summarize_eval.js 沒有正常結束，step summary 可能不完整，請看 job log"
           fi
           exit "$EXIT"
