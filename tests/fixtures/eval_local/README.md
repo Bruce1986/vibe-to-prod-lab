@@ -18,7 +18,8 @@
 promptfoo 會在工作目錄留下 `.promptfoo` 之類的產物。
 
 ```bash
-# 0) 準備一個暫存工作區（$TMP 自己挑一個暫存路徑）
+# 0) 準備一個暫存工作區（從 repo 根目錄開始；$TMP 自己挑一個暫存路徑）
+REPO=$(pwd)
 mkdir -p "$TMP/pfprobe/labs/lab2-golden-eval"
 cp -R app fixtures "$TMP/pfprobe/"
 cp labs/lab2-golden-eval/{promptfooconfig.local.yaml,tests.small.yaml,mock_provider.js} \
@@ -30,8 +31,9 @@ cd "$TMP/pfprobe" && npm install promptfoo@0.121.19
 #    先確認埠沒人用（有真 Ollama 在跑就先停掉，否則假的綁不上、下面會打到真的），
 #    記下 PID，產完這一份立刻收掉。
 curl -s localhost:11434/api/tags && echo "← 11434 已經有人在聽，先處理再往下"
-python3 <此目錄>/fake_ollama.py &          # /api/tags 回 200、/api/chat 回 404
+python3 "$REPO/tests/fixtures/eval_local/fake_ollama.py" &   # /api/tags 回 200、/api/chat 回 404
 FAKE=$!
+sleep 1                                    # 等它綁好埠，否則下一行 curl 什麼都不印
 curl -s localhost:11434/api/tags           # 應回 {"models": []}——確認打到的是假的
 cd "$TMP/pfprobe/labs/lab2-golden-eval"
 npx promptfoo eval -c promptfooconfig.local.yaml --no-progress-bar -o output.json

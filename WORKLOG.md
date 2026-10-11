@@ -240,12 +240,13 @@
 - ⚠️ 待 owner 的三項與上一輪相同，未新增；另 `.claude/skills/local-eval/SKILL.md`
   也寫著同一個未標時點的「約 3 分鐘」，排程班禁止改該目錄，留給 owner。
 
-### 2026-10-10～11（互動 session：第 11–14 輪，owner 指示續審）
+### 2026-10-10～11（互動 session：第 11–15 輪，owner 指示續審）
 
 - 第 10 輪後本 PR 因輪數上限停審，這次是 owner 手動指示再審。Codex 對
   `origin/main` 的整份 diff 跑了兩次（第 11、14 輪）都無意見；以下是 Claude
   reviewer 與主審實測找到的。輪次對照：㉓–㉖ 第 11 輪、㉗ 第 12 輪、㉘ 第 13 輪、
   ㉙–㉛ 第 14 輪（Opus tracer；它另把 ㉓–㉘ 的實測敘述逐條重跑，全部重現）。
+  第 15 輪沒有新條目，是回頭修 ㉙ 與 ㉛ 在第 14 輪修得不完整的地方（寫在該兩條內）。
 - ㉓ **「抽取器失誤會被算進分數」不成立**。`tests.small.yaml` 檔頭用這句話解釋
   為什麼要掃平衡花括號。用 promptfoo 0.121.19 配假 provider 實測：輸出是
   「散文＋正確 JSON」或「```json 圍欄＋正確 JSON」時，`defaultTest` 的 is-json
@@ -271,8 +272,12 @@
   你那題，把它一併加進 `tests.small.yaml`」，但 `test_extracted_three_assertion_bodies`
   釘死「剛好 3 段」，掃描器一致性那條也對每一段都要求有掃描器。照現有三題的
   `value: |` 寫法加一題 → lint-test 紅，golden-eval 與 deploy-gate 都 `needs:` 它。
-  改成「至少 3 段、只比前三段」。回驗：加第 4 題 → 綠；把第 3 題改成單行
-  `value:`（只剩 2 段）→ 紅；只改第 2 份掃描器 → 紅。
+  第 14 輪先改成「至少 3 段、只比前三段」，第 15 輪的 reviewer 實測出那只在
+  新題加在檔尾時成立（插在最前面 17 failed、插在第 2 題後 7 failed，訊息只有
+  `assert False is True`）。改成用題目的 `description` 認那三題、不看順序。
+  回驗：新題加在最前面／第 2、3 題之間／檔尾 → 三種都綠；第 3 題改成單行
+  `value:` 或第 2 題改名 → 紅，訊息指名是哪一題；只改第 2 份掃描器 → 紅；
+  ㉕ 的 `toppings[0]` 突變 → 仍紅。
 - ㉚ **摘要每次都印寫死的「主線 golden 軌為 6 題」**，而 lab2 第 4 步就是要學員在
   `tests.yaml` 加題——加完之後學員自己 repo 的摘要仍說 6 題。`summarize_eval.js`
   不讀 `tests.yaml`，改成不報數字（「主線 golden 軌的題目在 tests.yaml」）；
@@ -281,8 +286,11 @@
 - ㉛ **fixture 重產步驟會留下一個佔住 11434 的假 Ollama**。`fake_ollama.py` 是
   `serve_forever()`，README 與檔頭都只寫 `… &`，沒有任何一步收掉它；機器上若本來
   有真 Ollama，假的綁不上、promptfoo 會打到真的，步驟也沒有檢查。補上先探埠、
-  記 PID、確認回的是 `{"models": []}`、產完 `kill`。新步驟裡「起→探→kill」那段
-  在本機實跑過（kill 後埠關閉）；整段重產 fixture 沒有重跑。
+  記 PID、確認回的是 `{"models": []}`、產完 `kill`。「起→探→kill」那段在本機
+  實跑過（kill 後埠關閉）；整段重產 fixture 沒有重跑。第 15 輪再補兩處：起了之後
+  先 `sleep 1` 再探（否則 `curl -s` 搶在綁埠之前、什麼都不印）；`<此目錄>` 這個
+  佔位符在前面已經 `cd` 走之後指不到東西，改成步驟 0 先記下的 `$REPO`。
+  這兩處是讀碼改的，改完沒有再實跑。
 - 本條目寫下時全套 pytest 87 綠 1 skip、ruff 乾淨（本機 Python 3.12、node 26）。
 - ㉘ **「逐題看掛在契約還是語意斷言」在 Actions 頁面上做不到**（第 13 輪，反方
   論證視角）。`.claude/skills/local-eval/SKILL.md` 第 4 步這樣引導，㉓ 改寫的

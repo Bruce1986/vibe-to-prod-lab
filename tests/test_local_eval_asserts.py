@@ -110,27 +110,54 @@ CASES = [
 ]
 
 
-def _assert_bodies():
-    """從 tests.small.yaml 取出三條 javascript 斷言的原始程式碼。
+# CASES 的索引 0／1／2 對到的是這三題。用 description 認題、不用出現順序：
+# lab2 README 引導學員把自己的題目加進 tests.small.yaml，加在哪個位置都不該
+# 讓 CASES 對到別題去。
+CORE_DESCRIPTIONS = [
+    "基本訂單（真模型版）",
+    "幻覺配料誘餌（真模型版）",
+    "模糊輸入要反問（真模型版）",
+]
 
-    刻意不依賴 PyYAML（本 repo 的 requirements 沒有它，加一個相依只為了讀三段
+
+def _all_assert_bodies():
+    """從 tests.small.yaml 取出每一段區塊式 javascript 斷言：[(題目 description, 程式碼)]。
+
+    刻意不依賴 PyYAML（本 repo 的 requirements 沒有它，加一個相依只為了讀幾段
     字串並不划算），改用縮排區塊的字面剖析：`value: |` 之後、縮排更深的行
-    都屬於同一段程式碼。格式一變就會抓不到，因此下面有一條測試專門盯著
-    「確實抓到 3 段」，抓錯不會靜靜地少測。
+    都屬於同一段程式碼，歸給它上方最近的 `- description:`。格式一變就會
+    抓不到，因此 `_assert_bodies` 找不到那三題時會直接講明，不會靜靜地少測。
     """
-    bodies, current, indent = [], None, None
+    bodies, current, indent, description = [], None, None, None
     for raw in TESTS_SMALL.read_text(encoding="utf-8").splitlines():
         if current is not None:
             if raw.strip() == "" or (len(raw) - len(raw.lstrip())) >= indent:
                 current.append(raw[indent:] if raw.strip() else "")
                 continue
-            bodies.append("\n".join(current))
+            bodies.append((description, "\n".join(current)))
             current, indent = None, None
+        if raw.startswith("- description:"):
+            description = raw.split(":", 1)[1].strip()
         if raw.strip() == "value: |":
             current, indent = [], len(raw) - len(raw.lstrip()) + 2
     if current is not None:
-        bodies.append("\n".join(current))
+        bodies.append((description, "\n".join(current)))
     return bodies
+
+
+def _assert_bodies():
+    """CASES 要考的那三段斷言，依 CORE_DESCRIPTIONS 的順序。"""
+    found = {}
+    for description, body in _all_assert_bodies():
+        found.setdefault(description, []).append(body)
+    for description in CORE_DESCRIPTIONS:
+        assert len(found.get(description, [])) == 1, (
+            f"tests.small.yaml 裡 description 為「{description}」的題目應該恰有一段 "
+            f"`value: |` 斷言，實際 {len(found.get(description, []))} 段——"
+            "題目被改名、刪掉，或斷言改成別種寫法了？"
+            "（本檔的 CASES 是照這三題寫的，要一起改。）"
+        )
+    return [found[description][0] for description in CORE_DESCRIPTIONS]
 
 
 NODE = shutil.which("node")
@@ -140,19 +167,16 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_extracted_three_assertion_bodies():
-    """剖析器本身要先站得住：抓不到 3 段就代表下面的案例根本沒在測東西。
+    """剖析器本身要先站得住：抓不到那三題就代表下面的案例根本沒在測東西。
 
-    只要求「至少 3 段」而不是「剛好 3 段」：lab2 README 引導學員把自己的題目
-    也加進 tests.small.yaml，照現有三題的 `value: |` 寫法加第 4 題是正當操作，
-    不該讓 lint-test（連帶 golden-eval 與 deploy-gate）變紅。CASES 只考前三段，
-    多出來的段落不在本檔的守備範圍。
+    不釘「全檔剛好 3 段」：lab2 README 引導學員把自己的題目也加進
+    tests.small.yaml，照現有三題的 `value: |` 寫法多加一題是正當操作，不該讓
+    lint-test（連帶 golden-eval 與 deploy-gate）變紅。學員加的題目不在本檔的
+    守備範圍。
     """
     bodies = _assert_bodies()
-    assert len(bodies) >= 3, (
-        f"預期從 tests.small.yaml 取出至少 3 段斷言，實際 {len(bodies)} 段——"
-        "原本三題的 `value: |` 寫法被改掉了？"
-    )
-    for body in bodies[:3]:
+    assert len(bodies) == 3
+    for body in bodies:
         assert "return" in body
 
 
@@ -164,8 +188,8 @@ def test_three_scanners_stay_byte_identical():
     這條把契約釘成守門——真要精簡成共用檔（見 tests.small.yaml 的註解）時，
     這條也會紅，提醒你回來一起改。
     """
-    # 只比原本那三段：學員自己加的題目不一定用這段掃描器。
-    prefixes = [body.split("let obj = null;")[0] for body in _assert_bodies()[:3]]
+    # 只比 CORE_DESCRIPTIONS 那三題：學員自己加的題目不一定用這段掃描器。
+    prefixes = [body.split("let obj = null;")[0] for body in _assert_bodies()]
     assert all("cands.push" in prefix for prefix in prefixes), (
         "抓不到掃描器那一截——tests.small.yaml 的寫法變了，這條測試已對不上"
     )
