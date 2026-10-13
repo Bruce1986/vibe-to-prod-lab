@@ -209,15 +209,21 @@ def test_three_scanners_stay_byte_identical():
     ids=[f"{i}-{label}" for i, label, _, _ in CASES],
 )
 def test_assertion_verdict(index, label, output, expected):
-    """把真正在跑的斷言碼餵給 node，確認它對每種模型輸出的判定符合預期。"""
+    """把真正在跑的斷言碼餵給 node，確認它對每種模型輸出的判定符合預期。
+
+    拋例外與回 false 分開記：`tests.small.yaml` 檔頭寫明斷言要「優雅地 false
+    （Fail）而不是拋例外（Error）」。兩者若都記成 Fail，把斷言裡的 `obj?.items`
+    改回 `obj.items` 之後，「完全不是 JSON」「空輸出」這些期望 Fail 的案例照樣
+    通過，那句契約就沒有東西守著。
+    """
     body = _assert_bodies()[index]
     script = (
         "const body = JSON.parse(process.argv[1]);"
         "const output = JSON.parse(process.argv[2]);"
         "let verdict;"
-        "try { verdict = new Function('output', body)(output) === true; }"
-        "catch (e) { verdict = false; }"
-        "process.stdout.write(verdict ? '1' : '0');"
+        "try { verdict = new Function('output', body)(output) === true ? '1' : '0'; }"
+        "catch (e) { verdict = 'E:' + e.message; }"
+        "process.stdout.write(verdict);"
     )
     result = subprocess.run(
         [NODE, "-e", script, json.dumps(body), json.dumps(output)],
@@ -227,6 +233,9 @@ def test_assertion_verdict(index, label, output, expected):
         errors="replace",
         timeout=30,
         check=True,
+    )
+    assert result.stdout in ("0", "1"), (
+        f"{label}：斷言拋了例外（promptfoo 會記成 Error 而不是 Fail）——{result.stdout}"
     )
     verdict = result.stdout == "1"
     assert verdict is expected, (

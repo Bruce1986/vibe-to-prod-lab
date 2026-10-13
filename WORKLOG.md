@@ -374,3 +374,19 @@
     （owner 先前指示該檔不動）。
   - main 在本分支之後替單元一投影片加了一頁，狀態表的「13／18／12 張」合併後
     第一個數字會過期。
+
+### 2026-10-13（排程班第 24 輪起：斷言測試分開記「拋例外」與「回 false」）
+
+- 第 24 輪（Sonnet 三個視角＋Codex）：workflow／summarizer 失敗模式、文件事實查核、
+  Codex 都沒有發現；測試品質那道做了 51 個突變。
+- ㊳ `tests/test_local_eval_asserts.py` 的 `test_assertion_verdict` 把斷言**拋例外**
+  與**回 false** 都記成 Fail。`tests.small.yaml` 檔頭寫的「優雅地 false（Fail）而不是
+  拋例外（Error）」因此沒有守門：把第 1 題的 `obj?.items?.[0]?.sweetness` 改成
+  `obj.items[0].sweetness`、或把第 3 題的 `obj?.status` 改成 `obj.status`，全套照樣
+  88 綠。改成拋例外時直接讓該案例失敗。回驗：同樣兩個突變，修正後分別 5 條、1 條變紅。
+- 其餘存活的突變落在上一節「查過但沒有修」已列的兩類（workflow 的字串比對、
+  `summarize_eval.js` 沒有斷言守著的分支），同類的新例子有：拿掉 `-o output.json`、
+  拿掉寫入 `$GITHUB_ENV` 的 `MODEL=`、評測改用 `promptfooconfig.yaml`、`timeout 480`
+  改 590、`"124"` 改 `"125"`；讀不懂的結果檔那幾條測試只比對標題，各個前置檢查拿掉後
+  仍綠。沒有修，同樣留給 owner 判斷。
+- 本條目寫下時全套 pytest 88 綠 1 skip、`ruff check` 乾淨。
