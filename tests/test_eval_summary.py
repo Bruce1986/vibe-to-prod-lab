@@ -132,9 +132,10 @@ def test_missing_output_file_is_reported_as_runtime_error():
         ("一筆結果都沒有", '{"results": {"results": [], "stats": {}}}'),
         ("結果列是 null", '{"results": {"results": [null], "stats": {}}}'),
         ("結果列是字串", '{"results": {"results": ["oops"], "stats": {}}}'),
-        # 這一筆才真的會走到算分那段：前一列有作答，answered 數 > 0，
-        # 於是 rows.filter(row => row.success) 會碰到 null。上面兩筆在
-        # 「全部沒作答」就先轉彎了，測不到崩潰路徑（突變實測確認過）。
+        # 這一筆前一列有作答、後面混一個 null（answered 數 > 0，不會在
+        # 「全部沒作答」就轉彎）。只拿掉 summarize_eval.js 的 badRow 檢查時
+        # 這一筆不會變紅：例外被最外層的 try/catch 接住，兜底訊息的標題同樣是
+        # 「未完成」（2026-10-13 突變實測）。
         (
             "有作答的列後面混一個 null",
             json.dumps(

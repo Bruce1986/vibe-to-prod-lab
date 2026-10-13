@@ -235,7 +235,7 @@ def test_assertion_verdict(index, label, output, expected):
         check=True,
     )
     assert result.stdout in ("0", "1"), (
-        f"{label}：斷言拋了例外（promptfoo 會記成 Error 而不是 Fail）——{result.stdout}"
+        f"{label}：斷言拋了例外（tests.small.yaml 檔頭要求回 false 而不是拋例外）——{result.stdout}"
     )
     verdict = result.stdout == "1"
     assert verdict is expected, (

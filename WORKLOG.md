@@ -384,6 +384,14 @@
   拋例外（Error）」因此沒有守門：把第 1 題的 `obj?.items?.[0]?.sweetness` 改成
   `obj.items[0].sweetness`、或把第 3 題的 `obj?.status` 改成 `obj.status`，全套照樣
   88 綠。改成拋例外時直接讓該案例失敗。回驗：同樣兩個突變，修正後分別 5 條、1 條變紅。
+  這條守的是檔頭對寫法的要求，不是整題判定：promptfoo 0.121.19 的原始碼把拋例外的
+  javascript 斷言同樣記成該條斷言失敗（reason 為 `Custom function threw error: …`；
+  只讀了本機 npx 快取裡的原始碼，沒有實跑）。
+- 第 27 輪（Opus tracer）更正三處敘述：㊳ 的失敗訊息原本寫「promptfoo 會記成 Error
+  而不是 Fail」，與上面那段原始碼相反，已改掉；`tests.small.yaml` 檔頭說掃描器兩個細節
+  「都被實際驗證過」，第 2 點（掃完一個候選就把字串狀態歸零）拿掉後現有案例仍全綠，
+  已照實改寫；`tests/test_eval_summary.py`「有作答的列後面混一個 null」那筆的註解說
+  它測得到崩潰路徑，實測只拿掉 badRow 檢查時它不會紅（被 try/catch 兜底接住），已改寫。
 - 其餘存活的突變落在上一節「查過但沒有修」已列的兩類（workflow 的字串比對、
   `summarize_eval.js` 沒有斷言守著的分支），同類的新例子有：拿掉 `-o output.json`、
   拿掉寫入 `$GITHUB_ENV` 的 `MODEL=`、評測改用 `promptfooconfig.yaml`、`timeout 480`

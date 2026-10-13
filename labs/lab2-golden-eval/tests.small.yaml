@@ -24,7 +24,8 @@
 # [PASS]／[FAIL] 加模型原始輸出，summarize_eval.js 的摘要也只報總分，
 # workflow 沒有上傳 output.json。學員在 Actions 頁面上看不到「掛在哪一條」。
 #
-# 掃描器的兩個細節（都被 tests/test_local_eval_asserts.py 實際驗證過）：
+# 掃描器的兩個細節（第 1 點被 tests/test_local_eval_asserts.py 實際驗證過；
+# 第 2 點拿掉後該檔現有案例仍全綠）：
 #   1. 只有進入某個候選物件（depth > 0）之後才追蹤字串狀態。否則物件「之前」
 #      的散文裡若有一個未配對的半形引號，狀態會被扳成「字串內」，後面真正的
 #      JSON 花括號全被當成字串內容跳過，整個物件抽不到——又變成抽取器的失誤
