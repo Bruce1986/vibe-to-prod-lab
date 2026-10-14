@@ -175,7 +175,7 @@
     仍是裸的——**漏的就在它自己重寫的那一行**。已補上，並把過度宣稱就地改掉。
   - WORKLOG 原本跳過第 8 輪沒立條目（輪次只有 4／5／6-7／9），第 9 輪卻通篇以「第 8
     輪」為主詞，讀者無從得知它做了什麼。已在第 9 輪條目前補一行指向 `5fc8f0e`。
-  - `README.md` 的結構地圖寫「PR checklist」，但同檔 FAQ 與 `AGENTS.md` 都寫
+  - `README.md` 的 repo 地圖寫「PR checklist」，但同檔 FAQ 與 `AGENTS.md` 都寫
     `pr-checklist.md`，同一份檔案內兩種寫法。已統一成帶副檔名。
   - `README.md` 與 `slides/03` 把**整個** `coding-review-principles.md` 說成「Style／
     Review 兩節要貼的原文」，但 `AGENTS.sample.md` 說的是只貼「十條」與「八條」兩個
