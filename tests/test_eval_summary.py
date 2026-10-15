@@ -15,6 +15,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 from pathlib import Path
 
@@ -205,6 +206,9 @@ def test_partial_no_answer_is_excluded_from_the_score(tmp_path):
     assert "本次成績：1/1" in summary, "分母要是有作答的題數，不是總題數"
     assert "本次成績：1/3" not in summary
     assert "2 筆沒拿到模型輸出，不計分" in summary
+    # 題數仍回推得出 3，但只考到一部分，不能跟歷史的 3 題 3/3 並列
+    assert "曾以這" not in summary
+    assert "沒有可比的對照組" in summary
 
 
 def test_multi_provider_run_does_not_distort_the_numbers(tmp_path):
@@ -238,6 +242,31 @@ def test_multi_provider_run_does_not_distort_the_numbers(tmp_path):
     assert "曾以這 3 題拿 3/3" in summary, "歷史對照的數字是固定事實，不能跟著本次題數變"
     assert "6 題拿" not in summary
     assert "本次成績：6/6" in summary
+
+
+def test_partial_no_answer_with_two_providers_states_what_is_missing(tmp_path):
+    """2 個 provider 其中一個整批沒作答（例如 workflow 只拉了第一顆模型）。
+
+    分母是列數不是題數：摘要不能寫成「只有 3 筆拿到輸出」配「3 題全部作答」，
+    讀者會看不出缺的是哪些。要講的是 6 筆裡缺了 3 筆。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    doubled = []
+    for row in data["results"]["results"]:
+        for label in ("A", "B"):
+            clone = json.loads(json.dumps(row))
+            clone["provider"] = {"id": "ollama:chat:x", "label": label}
+            if label == "B":
+                clone["response"]["output"] = ""
+                clone["success"] = False
+            doubled.append(clone)
+    data["results"]["results"] = doubled
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+    assert "本次成績：3/3**（另有 3 筆沒拿到模型輸出，不計分）" in summary
+    assert "6 筆結果裡有 3 筆沒拿到模型輸出" in summary
+    assert "曾以這" not in summary
 
 
 def test_missing_testidx_is_reported_as_unknown_not_as_a_question_count(tmp_path):
@@ -320,6 +349,73 @@ def test_baseline_comparison_is_dropped_when_the_question_count_changes(tmp_path
     assert "本次成績：2/2" in summary
 
 
+def test_baseline_comparison_is_dropped_for_more_questions_too(tmp_path):
+    """題數多於 3 時也不可比——上一條只用 2 題，`===` 寫成 `>=` 仍會過。
+
+    學員照 lab2 在小樣卷加題就是這個情境：4 題的成績旁邊印「曾以這 3 題拿
+    3/3」，等於拿不同考卷的分數並列。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    rows = data["results"]["results"]
+    extra = json.loads(json.dumps(rows[0]))
+    extra["testIdx"] = len(rows)
+    rows.append(extra)
+    four = tmp_path / "output.json"
+    four.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(four)
+    assert "4 題小樣卷" in summary
+    assert "沒有可比的對照組" in summary
+    assert "曾以這" not in summary
+
+
+def test_row_count_is_shown_when_it_differs_from_question_count(tmp_path):
+    """單一 provider、同一題出現兩列時，要把列數講出來。
+
+    不講的話畫面是「2 題小樣卷」配「本次成績 3/3」，分母比題數還大卻沒有解釋
+    （summarize_eval.js 裡 `rows.length !== questions` 那個判準）。多 provider
+    的情境由 test_multi_provider_run_does_not_distort_the_numbers 守，那裡
+    `providers > 1` 本身就成立，所以擋不住這個判準被拿掉。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    rows = data["results"]["results"]
+    rows[2]["testIdx"] = rows[1]["testIdx"]
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+    assert "2 題小樣卷，共 3 筆結果" in summary
+    assert "個 provider" not in summary
+
+
+@pytest.mark.parametrize(
+    ("label", "output", "counts_as_answered"),
+    [
+        ("純空白", "   \n", False),
+        ("null", None, False),
+        ("物件", {"status": "ok"}, True),
+        ("空陣列", [], True),
+    ],
+)
+def test_what_counts_as_an_answer(tmp_path, label, output, counts_as_answered):
+    """`answered()` 檔內註解宣稱的四種邊界：空白與 null 不算作答，非字串算。
+
+    做法是把第一題換成該輸出、其餘兩題照常作答，看它有沒有被排除在分母外。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    data["results"]["results"][0]["response"]["output"] = output
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+    if counts_as_answered:
+        assert "本次成績：3/3" in summary, f"{label} 應算作答：\n{summary}"
+        assert "沒拿到模型輸出" not in summary
+    else:
+        assert "本次成績：2/2" in summary, f"{label} 不應算作答：\n{summary}"
+        assert "1 筆沒拿到模型輸出，不計分" in summary
+        # 只缺 1 筆也是部分作答（守 `unanswered > 0` 的邊界）：不能並列歷史的 3/3
+        assert "曾以這" not in summary
+        assert "沒有可比的對照組" in summary
+
+
 def test_wording_matches_whether_promptfoo_logged_errors(tmp_path):
     """全部沒作答時，措辭要跟著 stats.errors 走，不能兩種狀態講同一句話。
 
@@ -397,4 +493,157 @@ def test_eval_is_time_boxed_inside_its_step():
     assert int(seconds.group(1)) < int(step_minutes.group(1)) * 60, (
         f"自控 timeout {seconds.group(1)}s 沒有小於 step 的 "
         f"{step_minutes.group(1)} 分鐘，摘要仍會被 GitHub 砍掉"
+    )
+
+
+def eval_step_run_block():
+    """取出「本地模型評測」step 的 run block（去掉 YAML 的縮排）。"""
+    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
+    start = next(
+        (i for i, ln in enumerate(lines) if ln.strip().startswith("- name: 本地模型評測")), None
+    )
+    assert start is not None, "找不到『本地模型評測』這個 step——測試已對不上 workflow"
+    run = next(
+        (i for i in range(start + 1, len(lines)) if lines[i].strip() == "run: |"), None
+    )
+    assert run is not None, "『本地模型評測』step 應該是 `run: |` 的多行 block"
+    key_indent = len(lines[run]) - len(lines[run].lstrip())
+    body = []
+    for ln in lines[run + 1 :]:
+        if ln.strip() and len(ln) - len(ln.lstrip()) <= key_indent:
+            break
+        body.append(ln)
+    indent = min(len(ln) - len(ln.lstrip()) for ln in body if ln.strip())
+    return "\n".join(ln[indent:] for ln in body) + "\n"
+
+
+# 假的 timeout：把 `-o <檔名>` 指定的檔案寫成一個記號，再以 FAKE_EXIT 結束。
+# 假的 node：印出它拿到的那個檔案的內容，以 FAKE_NODE_EXIT 結束。
+# 兩者一起驗「promptfoo 寫到哪、判讀就讀哪」：檔名對不上時記號不會出現在摘要裡。
+FAKE_TIMEOUT = """#!/bin/sh
+out=""
+prev=""
+for arg in "$@"; do
+  [ "$prev" = "-o" ] && out="$arg"
+  prev="$arg"
+done
+[ -n "$out" ] && echo "FAKE_OUTPUT_FROM_PROMPTFOO" > "$out"
+exit "${FAKE_EXIT:-0}"
+"""
+FAKE_NODE = """#!/bin/sh
+cat "$2" 2>/dev/null || echo "NODE_COULD_NOT_READ $2"
+exit "${FAKE_NODE_EXIT:-0}"
+"""
+# 假的 curl：只有打的是 Ollama 的預設埠、而且帶了 -f（HTTP 錯誤要算失敗）時，才回
+# FAKE_CURL_EXIT；其他呼叫一律當成連不上（7）。不看引數的話，workflow 把探測的
+# 埠打錯，所有非零評測都會被報成「基礎設施故障」，這裡卻照樣全綠。
+FAKE_CURL = """#!/bin/sh
+url=no
+fail=no
+for arg in "$@"; do
+  case "$arg" in
+    http://localhost:11434/*) url=yes ;;
+    --fail) fail=yes ;;
+    --*) ;;
+    -*f*) fail=yes ;;
+  esac
+done
+[ "$url" = yes ] && [ "$fail" = yes ] || exit 7
+exit "${FAKE_CURL_EXIT:-0}"
+"""
+# 假的 npx：run block 裡的 npx 本來就該包在 timeout 裡、由假 timeout 接手。走到這裡
+# 代表 workflow 改了控時寫法——不擋的話，測試會真的從網路下載 promptfoo 去打本機的
+# 11434（開發機上可能有真的 Ollama）。直接以 97 結束，讓離開碼斷言變紅。
+FAKE_NPX = """#!/bin/sh
+echo "測試替身：npx 沒有經過 timeout 就被呼叫了：$*" >&2
+exit 97
+"""
+BASH = shutil.which("bash")
+
+
+# Windows 本機直接跳過，不賭環境：`which("bash")` 可能先找到 System32 的 WSL bash
+# （讀不懂 Windows 路徑），而 write_text 在 Windows 會寫出 CRLF，假指令的 shebang
+# 變成 `#!/bin/sh\r`。兩者都會整批假紅、跟 workflow 對錯無關。這條守的是
+# Actions（ubuntu）上的 bash 行為，quality.yml 的 lint-test 一定會跑到。
+@pytest.mark.skipif(
+    BASH is None or os.name == "nt",
+    reason="需要 POSIX 環境的 bash 才能照 Actions 的方式執行 run block（CI 上一定會跑）",
+)
+@pytest.mark.parametrize(
+    ("label", "promptfoo_exit", "ollama_alive", "node_exit", "expect_in", "expect_not_in"),
+    [
+        ("全過", 0, True, 0, ["FAKE_OUTPUT_FROM_PROMPTFOO"], ["離開碼", "逾時", "基礎設施"]),
+        # 全過之後 daemon 是死是活不影響結果，不能印「未完成」配綠燈
+        ("全過但 Ollama 事後已死", 0, False, 0, ["FAKE_OUTPUT_FROM_PROMPTFOO"], ["基礎設施"]),
+        ("有題目沒過", 100, True, 0, ["FAKE_OUTPUT_FROM_PROMPTFOO"], ["離開碼", "逾時"]),
+        ("逾時", 124, True, 0, ["評測逾時"], ["FAKE_OUTPUT_FROM_PROMPTFOO"]),
+        ("Ollama 中途死亡", 100, False, 0, ["基礎設施故障"], ["FAKE_OUTPUT_FROM_PROMPTFOO"]),
+        ("promptfoo 異常結束", 1, True, 0, ["離開碼 1", "FAKE_OUTPUT_FROM_PROMPTFOO"], []),
+        ("判讀程式自己失敗", 100, True, 1, ["FAKE_OUTPUT_FROM_PROMPTFOO"], []),
+    ],
+)
+def test_eval_step_keeps_promptfoo_exit_code_and_writes_summary(
+    tmp_path, label, promptfoo_exit, ollama_alive, node_exit, expect_in, expect_not_in
+):
+    """照 Actions 的方式（`bash -e`，沒有 pipefail）實跑那段 run block。
+
+    這段 shell 的控制流程才是「紅了一眼看出哪一關」的本體，只用子字串檢查擋不住：
+    拿掉 `|| EXIT=$?`，`bash -e` 會在 promptfoo 非零時當場中止，摘要一個字都不寫；
+    把 `exit "$EXIT"` 換掉，step 的紅綠就不再跟著 promptfoo 走。這裡把 timeout／
+    curl／node／npx 換成只偽造離開碼的假指令（npx 被直接呼叫就紅，見 FAKE_NPX），驗 step 的離開碼與 step summary 的內容；
+    對措辭改動不敏感，只綁定各分支的關鍵字。
+    """
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fakes = (
+        ("timeout", FAKE_TIMEOUT), ("node", FAKE_NODE), ("curl", FAKE_CURL), ("npx", FAKE_NPX)
+    )
+    for name, body in fakes:
+        script = fake_bin / name
+        script.write_text(body, encoding="utf-8")
+        script.chmod(0o755)
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    summary_file = tmp_path / "step_summary.md"
+    summary_file.write_text("", encoding="utf-8")
+    script = tmp_path / "step.sh"
+    script.write_text(eval_step_run_block(), encoding="utf-8")
+
+    # PATH 只給替身與系統基本指令，不接使用者的 PATH：run block 若呼叫了沒被替換的
+    # 指令，寧可找不到而紅，也不要真的執行。逾時時殺整個行程群組，不留孤兒。
+    proc = subprocess.Popen(
+        [BASH, "-e", str(script)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=str(workdir),
+        env={
+            "PATH": f"{fake_bin}{os.pathsep}/usr/bin{os.pathsep}/bin",
+            "GITHUB_STEP_SUMMARY": str(summary_file),
+            "FAKE_EXIT": str(promptfoo_exit),
+            "FAKE_CURL_EXIT": "0" if ollama_alive else "7",
+            "FAKE_NODE_EXIT": str(node_exit),
+        },
+        start_new_session=True,
+    )
+    try:
+        out, err = proc.communicate(timeout=30)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        out, err = proc.communicate()
+        pytest.fail(f"{label}：run block 30 秒內沒有結束（已殺掉整個行程群組）")
+    stdout = out.decode("utf-8", errors="replace")
+    stderr = err.decode("utf-8", errors="replace")
+    summary = summary_file.read_text(encoding="utf-8")
+    assert proc.returncode == promptfoo_exit, (
+        f"{label}：step 的離開碼應該等於 promptfoo 的 {promptfoo_exit}，實得 "
+        f"{proc.returncode}\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    )
+    for text in expect_in:
+        assert text in summary, f"{label}：step summary 應包含「{text}」：\n{summary}"
+    for text in expect_not_in:
+        assert text not in summary, f"{label}：step summary 不應包含「{text}」：\n{summary}"
+    # 判讀程式失敗時要在 job log 留下註記；其他情境不該出現
+    warned = "::warning::" in stdout
+    assert warned == (node_exit != 0), (
+        f"{label}：job log 的 ::warning:: 應該{'出現' if node_exit else '不出現'}：\n{stdout}"
     )

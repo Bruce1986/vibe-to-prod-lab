@@ -12,8 +12,12 @@ CI 上那正是最糟的失效：守門一條都沒跑，儀表板卻是綠的�
 
 刻意不在任何地方寫死「共幾條」：這個數字每次增修 parametrize 就會變，
 寫死等於留一句遲早過期的宣稱（本檔第一版就寫了 35，當下實際是 38）。
+
+同理也守 workflow 裡另外兩項「改了不會有任何東西紅」的工具鏈前提：promptfoo
+的釘版要與 fixture 的產生版本一致，以及 eval-local 的 job 層 timeout 要蓋得住各步驟。
 """
 
+import json
 import os
 import re
 import shutil
@@ -84,6 +88,53 @@ def test_all_workflows_pin_the_same_node_version():
     versions = {v for vs in per_file.values() for v in vs}
     assert len(versions) == 1, (
         f"各軌的 node 版本應該一致，目前有 {sorted(versions)}：{per_file}"
+    )
+
+
+def test_promptfoo_pins_match_the_fixture_version():
+    """所有 workflow 的 `promptfoo@x.y.z` 必須同一版，而且等於 fixture 的產生版本。
+
+    `summarize_eval.js` 的判讀依據（沒作答時 errors＝0、每列都有 error 欄位）是
+    拿 `tests/fixtures/eval_local/` 那兩份 output.json 實測出來的，fixture 檔裡記著
+    產生它的 `promptfooVersion`。workflow 換了版本而 fixture 沒重產，判讀的前提就
+    沒有人驗過了。突變實證：把 eval-local.yml 的兩處改成 0.121.18 → 本條前全套仍綠。
+    """
+    pins = {}
+    for path in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml")):
+        found = re.findall(r"promptfoo@(\d+\.\d+\.\d+)", path.read_text(encoding="utf-8"))
+        if found:
+            pins[path.name] = sorted(set(found))
+    assert pins, "沒有任何 workflow 釘 promptfoo 版本——這條測試已對不上 repo"
+    versions = {v for vs in pins.values() for v in vs}
+    assert len(versions) == 1, f"各 workflow 的 promptfoo 版本應該一致，目前有 {pins}"
+
+    fixtures = sorted((REPO_ROOT / "tests" / "fixtures" / "eval_local").glob("*.json"))
+    assert fixtures, "找不到 eval_local 的 fixture"
+    for fixture in fixtures:
+        data = json.loads(fixture.read_text(encoding="utf-8"))
+        assert data["metadata"]["promptfooVersion"] in versions, (
+            f"{fixture.name} 是 promptfoo {data['metadata']['promptfooVersion']} 產生的，"
+            f"workflow 卻釘 {sorted(versions)}：請照 fixture README 重產，"
+            "並重新檢查 summarize_eval.js 檔頭的實測依據"
+        )
+
+
+def test_eval_local_job_timeout_exceeds_its_steps():
+    """eval-local 的 job 層 timeout 必須大於各步驟 timeout 的總和。
+
+    job 層先觸發時整個 job 會被砍掉，分層的 ::error:: 訊息與 step summary 都不會
+    執行（見 eval-local.yml 的註解）。這是跟 test_eval_is_time_boxed_inside_its_step
+    同一種失效、只是上移一層。依縮排區分：job 層 4 格、step 層 8 格。
+    """
+    workflow = (REPO_ROOT / ".github" / "workflows" / "eval-local.yml").read_text(
+        encoding="utf-8"
+    )
+    job = [int(n) for n in re.findall(r"^ {4}timeout-minutes:\s*(\d+)", workflow, re.MULTILINE)]
+    steps = [int(n) for n in re.findall(r"^ {8}timeout-minutes:\s*(\d+)", workflow, re.MULTILINE)]
+    assert len(job) == 1, f"eval-local 應該只有一個 job 層 timeout-minutes，實得 {job}"
+    assert steps, "eval-local 的步驟應該各自有 timeout-minutes"
+    assert job[0] > sum(steps), (
+        f"job 層 timeout {job[0]} 分鐘沒有大於各步驟總和 {sum(steps)} 分鐘"
     )
 
 
