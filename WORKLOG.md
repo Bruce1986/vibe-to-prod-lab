@@ -427,7 +427,8 @@
 - 以上每項都在 scratchpad 沙箱做過突變回驗（改壞實作會紅；`curl --fail -s` 這種等價
   寫法維持綠）。
 - 查過但沒有修、留給 owner：
-  - **加分關驗不了 Lab 2 的 prompt 修復**（第 31 輪 Opus 反方論證）：07-16 PoC 用原版
+  - **加分關驗不了 Lab 2 的 prompt 修復**（第 31 輪 Opus 反方論證；**owner 10-15 裁決：
+    改定位，見下一節**）：07-16 PoC 用原版
     prompt 時 qwen2.5:1.5b 就已經掛在幻覺誘餌題，而 Lab 2 情境劇刪掉的那行只影響這一題，
     所以改壞前後、修回來都是同一種紅。lab2 README §3、`/lab2` 第 4 步、`mock_provider.js`
     註解卻把加分關介紹成「對真模型驗證」。要改定位還是改教法，屬教學設計，未動。
@@ -436,3 +437,36 @@
     拿掉後沒有測試會紅；promptfoo 不會寫出這些形狀，拿掉後也只會落到「未完成」，判定不補。
 - 第 36、37 輪連續兩輪零 finding（收斂）。
 - 本條目寫下時全套 pytest 104 綠 1 skip、`ruff check` 乾淨（本機 Python 3.12、node 26）。
+
+### 2026-10-15（owner 裁決後：加分關改定位，並更正 3/3 對 1/3 的但書）
+
+- **owner 裁決**：加分關看不出 Lab 2 情境劇那一行的作用 → 選「改定位」。
+  `labs/lab2-golden-eval/README.md` 第 3 步、`.claude/skills/lab2/SKILL.md` 第 4 步、
+  `mock_provider.js` 檔頭、`docs/teacher-setup.md`〈已知設計決策〉四處，不再說加分關能
+  「對真模型驗證」這一行，改說它示範的是「同一份 golden 換模型重考」。
+  `quality.yml` 缺 `permissions:` 那件另開 PR 補（repo 的 GITHUB_TOKEN 預設已是唯讀：
+  `gh api repos/Bruce1986/vibe-to-prod-lab/actions/permissions/workflow` 回
+  `default_workflow_permissions: read`）。
+- 查證時翻出兩次 run 的 log（10-15 時仍可下載，GitHub 保存 90 天，之後就沒了，所以把
+  原始輸出抄在這裡；JSON 的空白已壓縮，內容與欄位值逐字相同）：
+  - 3/3：eval-live run `29418527554`（2026-07-15，commit `604242d`，gpt-4o-mini）。
+    基本訂單 `{"status":"ok","items":[{"name":"珍珠奶茶","size":"L","sweetness":50,"ice":"少冰","toppings":[],"quantity":1}],"notes":""}`；
+    誘餌 `{"status":"ok","items":[{"name":"珍珠奶茶","size":"L","sweetness":100,"ice":"去冰","toppings":["珍珠"],"quantity":1}],"notes":"加跳跳糖"}`；
+    模糊輸入 `{"status":"need_clarification","question":"請問您想要點什麼飲品？"}`。
+  - 1/3：eval-local PoC run `29495815414`（2026-07-16，`poc/ollama-eval` commit `e53c621`，
+    qwen2.5:1.5b，渲染後的 prompt 含「配料只能使用菜單…」那一行）。
+    基本訂單 `{"status":"ok","items":[{"name":"珍珠奶茶","size":"L","sweetness":50,"ice":"少冰","toppings":[],"quantity":1}],"notes":"(選填)"}`；
+    誘餌 `{"status":"ok","items":[{"name":"珍珠奶茶","size":"L","sweetness":100,"ice":"去冰","toppings":["跳跳糖"],"quantity":1}],"notes":"(選填)"}`；
+    模糊輸入 `{"status":"ok","items":[{"name":"珍珠奶茶","size":"M","sweetness":50,"ice":"少冰","toppings":[],"quantity":1}],"notes":"(選填)"}`。
+- ㊹ **更正：3/3 與 1/3 用的是同一版斷言。** 兩個 commit 的 `tests.live.yaml` 都是舊式單行
+  斷言（防禦性寫法是 08-16 `005a92a` 才進來的）。把上面六筆原始輸出用現行
+  `tests.small.yaml` 的斷言（`tests/test_local_eval_asserts.py` 抽出的那三段）與
+  `app/schemas/order.schema.json` 重判：gpt-4o-mini 三題全過；1.5B 只過基本訂單，誘餌題語意
+  斷言與 schema 都不過（跳跳糖不在配料 enum 裡），模糊輸入語意斷言不過。也就是現行斷言
+  同樣得到 3/3 與 1/3。lab2 README、`docs/02-llm-quality.md`、`slides/02` 講者備忘原本寫
+  「兩次的斷言寫法不同、不是同一把尺」，前提不成立，已改成「同一版斷言、差距來自模型，
+  但每邊只跑一次、只有 3 題」。`summarize_eval.js` 的但書講的是「之後每一次 run 與當年的
+  3/3」，那兩者的斷言寫法確實不同，未改。本檔 ㉔、㉖ 的舊說法未逐字更正。
+- 誘餌題 1.5B「上當」是實際輸出（toppings 裡有跳跳糖），不是格式或反問造成的 Fail。
+  教材改定位時引用的就是這筆；刪掉那一行之後的結果仍沒有實測。
+

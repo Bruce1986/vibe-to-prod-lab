@@ -53,7 +53,8 @@
 ## 已知設計決策（勿在課前翻案）
 
 - mock provider 以關鍵句「配料只能使用菜單」判斷 prompt 品質——教學模擬器，
-  機制對學員透明公開；真模型驗證走 `/local-eval`。
+  機制對學員透明公開；真模型重考走 `/local-eval`，但它看不出情境劇那一行的
+  作用（07-16 首測時 1.5B 在原版 prompt 下就已掛在誘餌題），見 lab2 README 第 3 步。
 - 學員軌全部零 API key；真 LLM 環節＝eval-local（Ollama 在 runner 上，
   零 token；monitor 不是 gate，紅色屬預期）。GitHub Models 退役史保留在
   投影片訃聞頁與各檔歷史註記，是刻意的教材，勿清掉。
