@@ -36,7 +36,7 @@
       `workflow_dispatch`，要合併進預設分支後才觸發得了）。第一次跑請確認：
       四個步驟紅綠落在預期的那一步、job summary 有出現且標題是「eval-local 完成」
       並帶本次成績與正確的模型名；記下實際耗時，回頭訂正 `docs/02-llm-quality.md`
-      的「約 3 分鐘」。之後課前一週再複測一次（qwen2.5:1.5b 分數會小幅浮動，屬預期）
+      與 `.claude/skills/local-eval/SKILL.md` 第 3 步（學員實際看到的那句）的「約 3 分鐘」。之後課前一週再複測一次（qwen2.5:1.5b 分數會小幅浮動，屬預期）
 - [ ] （選配）講師 key 的雲端對照 demo：promptfoo `openai:gpt-4o-mini`
       provider＋自備 key，課堂示範「同卷強模型 3/3」的對照組（成本幾美分）
 - [ ] HHEM／LettuceDetect 模型在講師機預下載快取；MiniCheck 770M CPU

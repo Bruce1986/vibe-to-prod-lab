@@ -55,5 +55,19 @@ kill "$FAKE"                               # 不收掉會一直佔著 11434
    `<擷取當時的暫存沙箱>`——那是某一台機器某一次 session 的路徑，
    留著只會讓人以為它有意義。
 
+## 升 promptfoo 版本時
+
+`tests/test_ci_toolchain.py` 的 `test_promptfoo_pins_match_the_fixture_version`
+要求 workflow 的釘版等於這兩份 fixture 的 `metadata.promptfooVersion`，所以升版
+要照這個順序做，不能只改 workflow：
+
+1. `grep -rn 'promptfoo@' .` 找出所有釘版處一起改（workflow 之外還有教材與
+   AGENTS.md，那些不在測試守備範圍內，漏改不會紅），上面第 0) 步的
+   `npm install promptfoo@…` 也換成新版。
+2. 照上一節重產兩份 fixture、更新本檔的版本與擷取日期。
+3. 重新核對 `labs/lab2-golden-eval/summarize_eval.js` 檔頭那段實測依據
+   （沒作答時 `stats.errors` 是 0、每一筆都帶斷言訊息的 `error` 欄位）在新版
+   是否仍成立——判讀的分類方式就建立在這上面。
+
 promptfoo 換版後結構若有變動，`tests/test_eval_summary.py` 會先紅在
 「這份 fixture 的形狀還成立嗎」那兩條，而不是靜靜地測到空氣。

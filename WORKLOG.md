@@ -366,9 +366,11 @@
     候選，語意斷言會判 Fail。依 ㉓ 那種輸出整題本來就 Fail，只影響明細。
   - `test_workflow_calls_the_summarizer` 是子字串比對：把呼叫改成 `echo node …`、
     拿掉 `|| EXIT=$?` 或 `exit "$EXIT"`，測試都不會紅（reviewer 突變實測）。
+    **10-15 已補（㊴）**：三種改法現在都會紅。
   - `summarize_eval.js` 有幾個分支沒有斷言守著（純空白輸出、讀不到結果檔那條
     路徑的 `診斷：` 那行、provider 只有 id 沒有 label 等，第 11 輪同一位 reviewer
-    的突變實測；㉝ 新增的兜底路徑的 `診斷：` 則有斷言）。
+    的突變實測；㉝ 新增的兜底路徑的 `診斷：` 則有斷言）。**10-15**：純空白輸出
+    已補（㊵）；provider 只有 id 沒有 label 仍沒有守。
   - `--repeat` 下題數會被高估（㉟）。
   - `.claude/skills/local-eval/SKILL.md` 仍寫「同一份考卷拿 3/3」而沒有但書
     （owner 先前指示該檔不動）。
@@ -395,6 +397,42 @@
 - 其餘存活的突變落在上一節「查過但沒有修」已列的兩類（workflow 的字串比對、
   `summarize_eval.js` 沒有斷言守著的分支），同類的新例子有：拿掉 `-o output.json`、
   拿掉寫入 `$GITHUB_ENV` 的 `MODEL=`、評測改用 `promptfooconfig.yaml`、`timeout 480`
-  改 590、`"124"` 改 `"125"`；讀不懂的結果檔那幾條測試只比對標題，各個前置檢查拿掉後
+  改 590、`"124"` 改 `"125"`（**10-15**：`-o output.json` 與 `"124"` 兩項已由 ㊴ 補上，
+  其餘三項仍存活）；讀不懂的結果檔那幾條測試只比對標題，各個前置檢查拿掉後
   仍綠。沒有修，同樣留給 owner 判斷。
 - 本條目寫下時全套 pytest 88 綠 1 skip、`ruff check` 乾淨。
+
+### 2026-10-15（互動 session：owner 指示 GGR fix-loop with Codex，第 28–37 輪）
+
+- Codex 第一輪撞到額度上限，沒有產出任何意見；收斂後（額度恢復）再跑一次最終交叉檢查，
+  無意見。其餘各輪都只有 Claude reviewer。
+- ㊴ `eval-local.yml`「本地模型評測」那段 run block 的控制流程原本只有子字串檢查。
+  新增 `test_eval_step_keeps_promptfoo_exit_code_and_writes_summary`：從 workflow 抽出
+  run block，用假的 `timeout`／`curl`／`node`／`npx` 以 `bash -e` 實跑 7 種情境，驗 step
+  離開碼等於 promptfoo 的離開碼、step summary 走對分支、判讀程式失敗時 job log 有
+  `::warning::`。假 curl 只認 `-f` 且打 `localhost:11434` 的呼叫；假 npx 被直接呼叫就以
+  97 結束（避免控時寫法被改掉時測試真的去下載 promptfoo）。PATH 只給替身與
+  `/usr/bin`、`/bin`，逾時殺整個行程群組。Windows 本機跳過（WSL bash、CRLF），CI 會跑。
+- ㊵ `summarize_eval.js` 的判讀補測試：純空白／null 不算作答、物件／空陣列算作答；
+  4 題時不印歷史對照；單一 provider 同一 testIdx 兩列時印出列數。
+- ㊶ 部分作答（有幾筆沒拿到輸出）時，原本照印「曾以這 3 題拿 3/3」，與只考到一部分的
+  成績並列。改成印「沒有可比的對照組」並講明幾筆裡缺幾筆；標題仍為「完成」不變。
+- ㊷ 兩處輸出措辭：讀不懂結果檔的分支原本一律說「沒有產出可解析的結果檔、評測根本沒
+  跑完」，但 JSON 合法、結構不對時也走這裡，已改成兩種都成立的說法；全部沒作答且
+  errors＝0 的分支原本說 OOM「也長這樣」，實測只有 model not found 一種，已把 OOM 標成推測。
+- ㊸ `tests/test_ci_toolchain.py` 新增兩條：所有 workflow 的 `promptfoo@` 釘版一致且等於
+  fixture 的 `metadata.promptfooVersion`；eval-local 的 job 層 timeout 大於各步驟總和。
+  `tests/fixtures/eval_local/README.md` 新增「升 promptfoo 版本時」的步驟；
+  `docs/teacher-setup.md` 的首跑訂正指示補上 `.claude/skills/local-eval/SKILL.md` 第 3 步。
+- 以上每項都在 scratchpad 沙箱做過突變回驗（改壞實作會紅；`curl --fail -s` 這種等價
+  寫法維持綠）。
+- 查過但沒有修、留給 owner：
+  - **加分關驗不了 Lab 2 的 prompt 修復**（第 31 輪 Opus 反方論證）：07-16 PoC 用原版
+    prompt 時 qwen2.5:1.5b 就已經掛在幻覺誘餌題，而 Lab 2 情境劇刪掉的那行只影響這一題，
+    所以改壞前後、修回來都是同一種紅。lab2 README §3、`/lab2` 第 4 步、`mock_provider.js`
+    註解卻把加分關介紹成「對真模型驗證」。要改定位還是改教法，屬教學設計，未動。
+  - `quality.yml` 沒有 `permissions:` 區塊（base 既有、本 PR 沒動到那幾行）。
+  - `summarize_eval.js` 對 stats 缺席、`stats.errors` 非數字、結果列為 null 的防禦檢查，
+    拿掉後沒有測試會紅；promptfoo 不會寫出這些形狀，拿掉後也只會落到「未完成」，判定不補。
+- 第 36、37 輪連續兩輪零 finding（收斂）。
+- 本條目寫下時全套 pytest 104 綠 1 skip、`ruff check` 乾淨（本機 Python 3.12、node 26）。
