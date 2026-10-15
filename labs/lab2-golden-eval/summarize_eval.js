@@ -109,8 +109,11 @@ function summarize(path) {
   if (parsed.kind === 'unreadable') {
     lines.push('### ⚠️ eval-local 未完成——執行期錯誤，不是模型品質訊號');
     lines.push('');
-    lines.push('promptfoo 沒有產出可解析的結果檔，代表評測根本沒跑完——多半是');
-    lines.push('config／provider 設定錯誤，而不是小模型答錯。');
+    // 這個分支同時接「讀不到／空檔／不是 JSON」與「JSON 合法但結構不對」，
+    // 措辭要對兩種都成立：後者可能是 promptfoo 換版改了結構，不一定是沒跑完。
+    lines.push('promptfoo 沒有產出判讀得了的結果檔（讀不到、不是 JSON，或結構與預期不同），');
+    lines.push('這次評測多半沒有正常跑完——常見原因是 config／provider 設定錯誤；');
+    lines.push('promptfoo 換版改了結果檔結構也會走到這裡。不論哪一種，都不是小模型答錯。');
     lines.push('');
     lines.push(`診斷：${parsed.detail}`);
     lines.push('');
@@ -140,7 +143,10 @@ function summarize(path) {
       lines.push('promptfoo 把它們記成 ERROR——多半是打不到服務（連線被拒、中途死亡）。');
     } else {
       lines.push('promptfoo 沒有記成 ERROR，而是把每一筆記成斷言失敗，看起來就像');
-      lines.push('「小模型全答錯」——模型沒拉到、載入失敗（OOM）或請求被拒都長這樣。');
+      // 實測過的只有「請求被拒（model not found，模型沒拉到）」這一種（見檔頭）；
+      // 載入失敗／OOM 是推測，措辭要分開，不能一起說成「都長這樣」。
+      lines.push('「小模型全答錯」——已實測的情形是模型沒拉到（請求回 model not found）；');
+      lines.push('模型載入失敗（OOM）推測也會長這樣，但尚未實測。');
     }
     lines.push('');
     lines.push('**不要**把這次的紅當成小模型的品質訊號，請重跑。');
@@ -190,6 +196,15 @@ function summarize(path) {
   }
   if (!questionsKnown) {
     lines.push('- 沒有可比的對照組：本次回推不出題數，無法判斷與歷史的 3 題是否同一份考卷');
+  } else if (unanswered > 0) {
+    // 題數照樣是 3，但有幾筆根本沒拿到輸出：「0/1」擺在「曾以這 3 題拿 3/3」旁邊，
+    // 讀起來就是同一份考卷的兩個分數，實際上這次只考到一部分。
+    // 只講缺了幾筆、不拿 scored 跟題數比：多 provider 時 scored 是列數，「只有 3 筆」
+    // 擺在「3 題都有作答」旁邊會讀不出缺的是什麼。
+    lines.push(
+      `- 沒有可比的對照組：本次 ${rows.length} 筆結果裡有 ${unanswered} 筆沒拿到模型輸出，` +
+        `歷史的 gpt-4o-mini 3/3 是 ${BASELINE_QUESTIONS} 題全部作答，兩者不是同一份量測`,
+    );
   } else if (questions === BASELINE_QUESTIONS) {
     lines.push('- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3（2026-07-15 實測）');
     lines.push('  （但書：3/3 那次跑的是舊版單行斷言，本次跑的是現在的防禦性斷言，');
