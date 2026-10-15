@@ -1,0 +1,246 @@
+// eval-local 的結果判讀：把 promptfoo 的 output.json 讀成一段 GitHub step summary。
+//
+// 為什麼抽成獨立檔案、而不是寫在 workflow 的 run block 裡：那段 shell 只有真的
+// 在 CI 上跑一次（要有 Ollama、要拉模型、要好幾分鐘 CPU 推論）才會被執行，
+// 判讀邏輯寫錯時沒有任何守門會紅——而它印出來的那句話，正是讀者唯一會看到的
+// 結論。抽出來之後 tests/test_eval_summary.py 就能拿真實的 output.json 餵它。
+//
+// 「只探測 daemon 存活」不足以區分「執行期錯誤」與「模型答錯」，這件事原本就
+// 寫在 workflow 的註解裡；但原本的第二道防線（output.json 存在且能 parse）
+// 一樣擋不住。**實測（2026-09-11、promptfoo 0.121.19，用 tests/fixtures/
+// eval_local/fake_ollama.py 起一個對 /api/tags 回 200、對 /api/chat 回 404
+// "model not found" 的假 Ollama）**：
+//   - promptfoo 正常跑完（exit 100）並寫出完全合法的 output.json；
+//   - 三筆結果的 `response.output` 全是空字串；
+//   - `stats.errors` 是 **0**，`failureReason` 是 ASSERT；
+//   - 三筆都**有** `error` 欄位，但內容是斷言訊息（"Custom function returned
+//     false…"）——跟模型真的答錯時長得一模一樣。
+// 所以「檔案能 parse」擋不住，「找有 error 欄位的列」也分不出來（兩種狀態都有）。
+// 分得出來的訊號只有一個：**沒有任何一筆拿到非空的模型輸出**。
+//
+// 用法：node summarize_eval.js [output.json]；markdown 印到 stdout。
+// 一律以 0 結束——這支程式負責「講清楚發生什麼事」，紅不紅由 workflow 拿
+// promptfoo 自己的離開碼決定。
+'use strict';
+
+const fs = require('fs');
+
+const OUTPUT_PATH = process.argv[2] || 'output.json';
+const MODEL = process.env.MODEL || '未知模型';
+
+// 歷史對照是固定事實，**一律寫死、不要內插本次的數字**：3/3 是 2026-07-15 用
+// 3 題考 gpt-4o-mini 的實測，33 個百分點是 1/3 的算術。把本次題數代進這幾句，
+// 題數一變就會印出捏造的歷史量測與錯誤的算術。
+const BASELINE_QUESTIONS = 3;
+
+/** 讀 output.json，回傳 {kind:'unreadable', detail} 或 {kind:'ok', rows, stats}。 */
+function readResults(path) {
+  let raw;
+  try {
+    raw = fs.readFileSync(path, 'utf8');
+  } catch (e) {
+    return { kind: 'unreadable', detail: `讀不到 ${path}（${e.code || e.message}）` };
+  }
+  if (raw.trim() === '') {
+    return { kind: 'unreadable', detail: `${path} 是空檔` };
+  }
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    return { kind: 'unreadable', detail: `${path} 不是合法 JSON（${e.message}）` };
+  }
+  const results = data && data.results;
+  const rows = results && Array.isArray(results.results) ? results.results : null;
+  if (rows === null) {
+    return { kind: 'unreadable', detail: `${path} 裡找不到 results.results 陣列` };
+  }
+  if (rows.length === 0) {
+    return { kind: 'unreadable', detail: `${path} 一筆結果都沒有` };
+  }
+  // 結果列不是物件時寧可整份判成讀不懂，也不要讓下面的取值拋 TypeError：
+  // 這支程式崩掉＝step summary 一個字都沒有，比印錯話更難查。
+  const badRow = rows.findIndex((row) => row === null || typeof row !== 'object');
+  if (badRow !== -1) {
+    return { kind: 'unreadable', detail: `${path} 第 ${badRow + 1} 筆結果不是物件` };
+  }
+  const stats = results.stats && typeof results.stats === 'object' ? results.stats : {};
+  return { kind: 'ok', rows, stats };
+}
+
+/** 這一筆有沒有真的拿到模型輸出？空字串／純空白／缺欄位都算沒有。 */
+function answered(row) {
+  const output = row && row.response && row.response.output;
+  if (typeof output === 'string') {
+    return output.trim() !== '';
+  }
+  // 非字串輸出（provider 直接回物件／陣列）也算作答；null／undefined 不算。
+  return output !== undefined && output !== null;
+}
+
+/** promptfoo 的一列＝一題 ×一個 provider，所以列數不等於題數。
+ *
+ * 回傳 `{ count, complete }`。`complete === false` 代表**有列缺這個鍵**，此時
+ * `count` 只是「每列各算一個」的退路，**不是量測值，不可拿去對外宣稱**：缺
+ * `testIdx` 又有 2 個 provider 時，3 題 ×2 會被算成 6，摘要就會把 6 筆結果報成
+ * 「6 題」——正是本檔存在的理由（把沒量到的東西講得很篤定）換了個觸發點。
+ * 呼叫端必須看 `complete`，不完整時改口說「無法回推」而不是給一個數字。
+ * （目前兩份真實 fixture 的每一列都有 `testIdx`，所以這是防禦性處理。）
+ */
+function countDistinct(rows, pick) {
+  const seen = new Set();
+  let missing = 0;
+  rows.forEach((row, index) => {
+    const key = pick(row);
+    if (key === undefined || key === null) {
+      missing += 1;
+      seen.add(`#${index}`);
+    } else {
+      seen.add(String(key));
+    }
+  });
+  return { count: seen.size, complete: missing === 0 };
+}
+
+function summarize(path) {
+  const parsed = readResults(path);
+  const lines = [];
+
+  if (parsed.kind === 'unreadable') {
+    lines.push('### ⚠️ eval-local 未完成——執行期錯誤，不是模型品質訊號');
+    lines.push('');
+    // 這個分支同時接「讀不到／空檔／不是 JSON」與「JSON 合法但結構不對」，
+    // 措辭要對兩種都成立：後者可能是 promptfoo 換版改了結構，不一定是沒跑完。
+    lines.push('promptfoo 沒有產出判讀得了的結果檔（讀不到、不是 JSON，或結構與預期不同），');
+    lines.push('這次評測多半沒有正常跑完——常見原因是 config／provider 設定錯誤；');
+    lines.push('promptfoo 換版改了結果檔結構也會走到這裡。不論哪一種，都不是小模型答錯。');
+    lines.push('');
+    lines.push(`診斷：${parsed.detail}`);
+    lines.push('');
+    lines.push('請到 job log 看 promptfoo 那一步的錯誤輸出，**不要**把這次的紅當成模型品質訊號。');
+    return lines.join('\n');
+  }
+
+  const { rows, stats } = parsed;
+  const answeredRows = rows.filter(answered);
+  const errorCount = Number.isFinite(Number(stats.errors)) ? Number(stats.errors) : 0;
+  const questionCount = countDistinct(rows, (row) => row.testIdx);
+  const providerCount = countDistinct(rows, (row) => {
+    const provider = row.provider;
+    if (!provider || typeof provider !== 'object') return provider;
+    return provider.label || provider.id;
+  });
+  const questions = questionCount.count;
+  const questionsKnown = questionCount.complete;
+  const providers = providerCount.count;
+  const providersKnown = providerCount.complete;
+
+  if (answeredRows.length === 0) {
+    lines.push('### ⚠️ eval-local 未完成——執行期錯誤，不是模型品質訊號');
+    lines.push('');
+    lines.push(`${rows.length} 筆結果**全部沒有拿到模型輸出**（promptfoo 記錄的 errors＝${errorCount}）。`);
+    if (errorCount > 0) {
+      lines.push('promptfoo 把它們記成 ERROR——多半是打不到服務（連線被拒、中途死亡）。');
+    } else {
+      lines.push('promptfoo 沒有記成 ERROR，而是把每一筆記成斷言失敗，看起來就像');
+      // 實測過的只有「請求被拒（model not found，模型沒拉到）」這一種（見檔頭）；
+      // 載入失敗／OOM 是推測，措辭要分開，不能一起說成「都長這樣」。
+      lines.push('「小模型全答錯」——已實測的情形是模型沒拉到（請求回 model not found）；');
+      lines.push('模型載入失敗（OOM）推測也會長這樣，但尚未實測。');
+    }
+    lines.push('');
+    lines.push('**不要**把這次的紅當成小模型的品質訊號，請重跑。');
+    return lines.join('\n');
+  }
+
+  const scored = answeredRows.length;
+  const passed = answeredRows.filter((row) => row.success === true).length;
+  const unanswered = rows.length - scored;
+
+  lines.push(`### 🏠 eval-local 完成（${MODEL} @ CI runner CPU）`);
+  lines.push('');
+  if (unanswered > 0) {
+    // 沒作答的不能計進分母：那正是本檔要防的誤讀，只是縮小到部分題目。
+    lines.push(`- **本次成績：${passed}/${scored}**（另有 ${unanswered} 筆沒拿到模型輸出，不計分）`);
+  } else {
+    lines.push(`- **本次成績：${passed}/${scored}**`);
+  }
+  lines.push('- 零 API key、零外部帳號、零費用——模型就跑在 runner 上');
+  lines.push('- 這是 **monitor** 不是 gate：紅色是資訊，不擋部署');
+  // 題數／provider 數只要有一項回推不出來，就不要給數字——寧可說「不知道」，
+  // 也不要把列數當題數講得很篤定（見 countDistinct 的註解）。
+  const providerScope = providersKnown
+    ? providers > 1
+      ? ` ×${providers} 個 provider`
+      : ''
+    : ' ×未知數量的 provider';
+  // 判準是「列數與題數對不上就要把列數講出來」，不是「有沒有多個 provider」：
+  // 同一個 testIdx 出現不只一列、provider 卻只數得到一個時，只看 providers > 1
+  // 會把列數藏起來，畫面變成「3 題小樣卷」＋「本次成績 6/6」。
+  // **這條管不到 `--repeat`**（這段註解原本以它為例，是錯的）：promptfoo 0.121.19
+  // 實跑 `--repeat 2`，6 列的 testIdx 是 0..5——每次重複都拿到新編號——所以本檔會
+  // 把它算成 6 題、印「6 題小樣卷」，不會印「共 6 筆結果」。光靠 testIdx 分不出
+  // 「同一題重考」與「不同的題」。workflow 沒有用 --repeat；自己加上去的話，
+  // 摘要的題數會被高估。
+  const multi = !providersKnown || providers > 1 || rows.length !== questions;
+  if (questionsKnown) {
+    const scope = `${questions} 題小樣卷${providerScope}${
+      multi ? `，共 ${rows.length} 筆結果` : ''
+    }`;
+    lines.push(`- 考的是 golden 題庫的 ${scope}（主線 golden 軌的題目在 tests.yaml）`);
+  } else {
+    lines.push(
+      `- 考的是 golden 題庫的小樣卷${providerScope}，共 ${rows.length} 筆結果；` +
+        'promptfoo 這次的結果列沒有 testIdx，**無法回推題數**（主線 golden 軌的題目在 tests.yaml）',
+    );
+  }
+  if (!questionsKnown) {
+    lines.push('- 沒有可比的對照組：本次回推不出題數，無法判斷與歷史的 3 題是否同一份考卷');
+  } else if (unanswered > 0) {
+    // 題數照樣是 3，但有幾筆根本沒拿到輸出：「0/1」擺在「曾以這 3 題拿 3/3」旁邊，
+    // 讀起來就是同一份考卷的兩個分數，實際上這次只考到一部分。
+    // 只講缺了幾筆、不拿 scored 跟題數比：多 provider 時 scored 是列數，「只有 3 筆」
+    // 擺在「3 題都有作答」旁邊會讀不出缺的是什麼。
+    lines.push(
+      `- 沒有可比的對照組：本次 ${rows.length} 筆結果裡有 ${unanswered} 筆沒拿到模型輸出，` +
+        `歷史的 gpt-4o-mini 3/3 是 ${BASELINE_QUESTIONS} 題全部作答，兩者不是同一份量測`,
+    );
+  } else if (questions === BASELINE_QUESTIONS) {
+    lines.push('- 對照組：雲端 gpt-4o-mini 曾以這 3 題拿 3/3（2026-07-15 實測）');
+    lines.push('  （但書：3/3 那次跑的是舊版單行斷言，本次跑的是現在的防禦性斷言，');
+    lines.push('  兩次的斷言寫法不同；而且 3 題的樣本小到單題翻面就是 33 個百分點。');
+    lines.push('  這個對照足以說明「同一份 golden 可以換模型重考」，但不是精確的模型能力量測。）');
+  } else {
+    lines.push(`- 沒有可比的對照組：歷史上的 gpt-4o-mini 3/3 考的是 3 題，本次是 ${questions} 題`);
+  }
+  if (unanswered > 0) {
+    lines.push('');
+    lines.push(`> ⚠️ 有 ${unanswered} 筆沒有拿到任何模型輸出（已排除在成績外）。`);
+    lines.push('> 那幾筆不是答錯而是沒答到，通常代表這次跑得不乾淨，建議重跑。');
+  }
+  return lines.join('\n');
+}
+
+if (require.main === module) {
+  // 檔頭說「一律以 0 結束」：判讀自己丟例外時也要印得出東西，否則 step summary
+  // 一片空白，讀者連「這次不算數」都看不到。
+  let text;
+  try {
+    text = summarize(OUTPUT_PATH);
+  } catch (e) {
+    text = [
+      '### ⚠️ eval-local 未完成——判讀程式自己出錯，不是模型品質訊號',
+      '',
+      // 讀檔與 JSON 解析的失敗在 readResults 裡就接住了，走不到這裡；會到這裡的
+      // 是「檔案讀得動、但處理內容時出錯」，同一份檔案重跑判讀只會得到同一個例外。
+      `summarize_eval.js 處理 ${OUTPUT_PATH} 的內容時丟出例外，沒有算出成績。`,
+      '這一次的結果**不要**當成「小模型答錯」來解讀。這多半是判讀程式的 bug，',
+      '或 output.json 的結構不是它預期的樣子；請把下面這行診斷連同 job log 回報。',
+      '',
+      `診斷：${e && e.message ? e.message : String(e)}`,
+    ].join('\n');
+  }
+  process.stdout.write(`${text}\n`);
+}
+
+module.exports = { summarize, answered, readResults };
