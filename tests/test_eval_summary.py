@@ -577,6 +577,8 @@ BASH = shutil.which("bash")
         ("全過但 Ollama 事後已死", 0, False, 0, ["FAKE_OUTPUT_FROM_PROMPTFOO"], ["基礎設施"]),
         ("有題目沒過", 100, True, 0, ["FAKE_OUTPUT_FROM_PROMPTFOO"], ["離開碼", "逾時"]),
         ("逾時", 124, True, 0, ["評測逾時"], ["FAKE_OUTPUT_FROM_PROMPTFOO"]),
+        # 逾時當下 daemon 也死了（例如推論中途 OOM）：仍要先報逾時，摘要裡才有調高上限的指示
+        ("逾時且 Ollama 已死", 124, False, 0, ["評測逾時"], ["基礎設施", "FAKE_OUTPUT_FROM_PROMPTFOO"]),
         ("Ollama 中途死亡", 100, False, 0, ["基礎設施故障"], ["FAKE_OUTPUT_FROM_PROMPTFOO"]),
         ("promptfoo 異常結束", 1, True, 0, ["離開碼 1", "FAKE_OUTPUT_FROM_PROMPTFOO"], []),
         ("判讀程式自己失敗", 100, True, 1, ["FAKE_OUTPUT_FROM_PROMPTFOO"], []),

@@ -143,9 +143,9 @@ function summarize(path) {
       lines.push('promptfoo 把它們記成 ERROR——多半是打不到服務（連線被拒、中途死亡）。');
     } else {
       lines.push('promptfoo 沒有記成 ERROR，而是把每一筆記成斷言失敗，看起來就像');
-      // 實測過的只有「請求被拒（model not found，模型沒拉到）」這一種（見檔頭）；
+      // 模擬過的只有「請求被拒（model not found，模型沒拉到）」這一種（假 Ollama，見檔頭）；
       // 載入失敗／OOM 是推測，措辭要分開，不能一起說成「都長這樣」。
-      lines.push('「小模型全答錯」——已實測的情形是模型沒拉到（請求回 model not found）；');
+      lines.push('「小模型全答錯」——以假的 Ollama 模擬過的情形是請求回 model not found（模型沒拉到）；');
       lines.push('模型載入失敗（OOM）推測也會長這樣，但尚未實測。');
     }
     lines.push('');
