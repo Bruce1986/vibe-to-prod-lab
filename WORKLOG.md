@@ -12,7 +12,7 @@
 | 投影片 ×3（Marp） | ✅ v2+ | 13／18／12 張；含講者備忘＋時間配額；案例①②已入 deck 2；待 Bruce 彩排微調 |
 | 案例集 docs/case-studies.md | ⏳ 待 owner 確認 | 六案；對照表對齊官方課綱。⚠️ 本列原記「✅ 定稿（07-16 owner 核准）」，但該說法與檔案內文的「草稿，待講師逐案核准」出自**同一顆 commit `a008d2b`**（建檔那顆），兩者不是獨立佐證，無法由 repo 內部判定——詳見該檔開頭與 2026-09-21 條目⑮ |
 | Template flag／Pages 設定 | ✅ | 2026-07-15 API 設定；Pages HTTP 200 |
-| 加分關 eval-local（Ollama） | ✅ 已換引擎 | GitHub Models 7/30 退役→改本地小模型；PoC 1/3、約 3 分鐘、零 token |
+| 加分關 eval-local（Ollama） | ✅ 已換引擎 | GitHub Models 7/30 退役→改本地小模型；PoC 1/3、約 3 分鐘、零 token。現行 `eval-local.yml` 還沒在 Actions 上跑過，合併後要先手動跑一次 |
 | 課前實測清單 | ⏳ | docs/teacher-setup.md |
 
 任務單一真相：課程整體規劃在 website repo 的
@@ -470,3 +470,7 @@
 - 誘餌題 1.5B「上當」是實際輸出（toppings 裡有跳跳糖），不是格式或反問造成的 Fail。
   教材改定位時引用的就是這筆；刪掉那一行之後的結果仍沒有實測。
 
+### 2026-10-21（排程班熔斷重審）
+
+- lab2 README「想加碼」換 `qwen2.5:3b` 那句補上：3b 沒有實測過，評測步驟有 8 分鐘上限，超過時摘要是「評測逾時」而不是成績。
+- 狀態表的加分關那列補註「現行 workflow 尚未在 Actions 跑過」（PR 描述與 10-15 條目都已這樣寫，只有狀態表沒寫）。
