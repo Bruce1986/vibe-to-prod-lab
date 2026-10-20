@@ -1,0 +1,651 @@
+"""加分關（eval-local）結果判讀的守門測試。
+
+為什麼需要這一份：`summarize_eval.js` 印出來的那段話，是讀者對這次評測唯一
+會看到的結論。它只有在 CI 上真的跑完一次 eval-local（要 Ollama、要拉模型、
+要好幾分鐘 CPU 推論）才會被執行，判讀寫錯時沒有任何守門會紅——而寫錯的
+代價正是它要防的那件事：把「模型根本沒作答」印成「小模型答錯」。
+
+這裡跑的是 `labs/lab2-golden-eval/summarize_eval.js` 本尊（不另抄一份實作），
+餵的是 `tests/fixtures/eval_local/` 底下 promptfoo 實跑出來的原始 output.json
+（產生方式見該目錄的 README）。兩側都要驗：壞掉時會不會紅、正常時會不會綠。
+只驗一側的守門會被「永遠說未完成」這種壞修法騙過去。
+"""
+
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SUMMARIZER = REPO_ROOT / "labs" / "lab2-golden-eval" / "summarize_eval.js"
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "eval_local"
+PROVIDER_ERROR = FIXTURES / "output_provider_error.json"
+ANSWERED = FIXTURES / "output_answered.json"
+
+NODE = shutil.which("node")
+pytestmark = pytest.mark.skipif(NODE is None, reason="需要 node 才能執行 summarize_eval.js")
+
+INCOMPLETE_HEADING = "eval-local 未完成"
+COMPLETE_HEADING = "eval-local 完成"
+
+
+def run_summary(output_path, model="qwen2.5:1.5b", cwd=None):
+    """跑真正的 summarize_eval.js，回傳它印出來的 markdown。
+
+    刻意不用 `check=True`：CalledProcessError 的訊息只有「exit status 1」，
+    node 真正丟的 TypeError／stack trace 留在 capture 起來的 stderr 裡不會被
+    印出來。這支程式崩掉正是本檔要守的事故之一（崩掉＝step summary 一片空白），
+    守門自己紅的時候得看得出原因。
+    """
+    result = subprocess.run(
+        [NODE, str(SUMMARIZER), str(output_path)],
+        capture_output=True,
+        # 明講 UTF-8：只寫 text=True 會用系統 locale 解碼，Windows 中文版是 cp950，
+        # node 印出來的 UTF-8 中文會解成亂碼或直接解碼失敗。
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=30,
+        check=False,
+        cwd=str(cwd or REPO_ROOT),
+        env={"PATH": os.environ.get("PATH", ""), "MODEL": model},
+    )
+    assert result.returncode == 0, (
+        f"summarize_eval.js 以 {result.returncode} 結束——它應該永遠印得出東西。\n"
+        f"stderr:\n{result.stderr}"
+    )
+    return result.stdout
+
+
+# --- 先確認 fixture 本身還是我們以為的那個形狀 -------------------------------
+# 這幾條看起來像在測資料，但它們守的是「下面那些測試有沒有在測空氣」：
+# promptfoo 換版把欄位改名時，若沒有這幾條，判讀測試會因為「反正也讀不到
+# 輸出」而繼續全綠，實際上什麼都沒驗到。
+
+
+def test_provider_error_fixture_shape():
+    """壞掉那份的關鍵前提：合法 JSON、有結果列、輸出全空、errors 卻是 0。"""
+    data = json.loads(PROVIDER_ERROR.read_text(encoding="utf-8"))
+    rows = data["results"]["results"]
+    assert len(rows) == 3
+    assert all(row["response"]["output"] == "" for row in rows), "fixture 應該每一題都沒有輸出"
+    assert data["results"]["stats"]["errors"] == 0, (
+        "這份 fixture 的重點就是 errors=0——若 promptfoo 改成會記 error，"
+        "『找 ERROR 列』就變成可行的判讀方式，這條測試提醒你回去重新評估"
+    )
+
+
+def test_error_field_does_not_distinguish_the_two_states():
+    """`error` 欄位存在與否分不出「沒作答」與「答錯」——這是判讀選型的關鍵依據。
+
+    summarize_eval.js 的檔頭用這件事否定「改成去找有 error 欄位的列」那條修法。
+    這種寫在註解裡的實證最容易悄悄過期，所以在這裡釘住：沒作答那份**每一筆都有**
+    error 欄位（內容是斷言訊息），跟模型真的答錯時長得一樣。
+    """
+    broken = json.loads(PROVIDER_ERROR.read_text(encoding="utf-8"))["results"]["results"]
+    assert all("error" in row for row in broken), (
+        "沒作答那份的每一筆都應該帶 error 欄位；若 promptfoo 改了行為，"
+        "summarize_eval.js 檔頭的推論依據要重新檢查"
+    )
+    assert all("Custom function returned false" in row["error"] for row in broken), (
+        "那些 error 的內容應該是斷言訊息，不是 provider 層的錯誤"
+    )
+
+
+def test_answered_fixture_shape():
+    """正常那份的關鍵前提：每一題都有非空輸出，而且全部通過。"""
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    rows = data["results"]["results"]
+    assert len(rows) == 3
+    assert all(row["response"]["output"].strip() for row in rows)
+    assert sum(1 for row in rows if row["success"]) == 3
+
+
+# --- 判讀本身：紅的那一側 ----------------------------------------------------
+
+
+def test_provider_error_is_not_reported_as_model_quality():
+    """模型沒作答時，摘要必須說『未完成』，而且不能宣告完成或報成績。"""
+    summary = run_summary(PROVIDER_ERROR)
+    assert INCOMPLETE_HEADING in summary
+    assert COMPLETE_HEADING not in summary
+    assert "本次成績" not in summary
+    assert "不要" in summary
+
+
+def test_missing_output_file_is_reported_as_runtime_error():
+    summary = run_summary(FIXTURES / "does-not-exist.json")
+    assert INCOMPLETE_HEADING in summary
+    assert COMPLETE_HEADING not in summary
+
+
+@pytest.mark.parametrize(
+    ("label", "content"),
+    [
+        ("空檔", ""),
+        ("不是 JSON", "promptfoo crashed"),
+        ("沒有 results 陣列", '{"results": {"stats": {}}}'),
+        ("一筆結果都沒有", '{"results": {"results": [], "stats": {}}}'),
+        ("結果列是 null", '{"results": {"results": [null], "stats": {}}}'),
+        ("結果列是字串", '{"results": {"results": ["oops"], "stats": {}}}'),
+        # 這一筆前一列有作答、後面混一個 null（answered 數 > 0，不會在
+        # 「全部沒作答」就轉彎）。只拿掉 summarize_eval.js 的 badRow 檢查時
+        # 這一筆不會變紅：例外被最外層的 try/catch 接住，兜底訊息的標題同樣是
+        # 「未完成」（2026-10-13 突變實測）。
+        (
+            "有作答的列後面混一個 null",
+            json.dumps(
+                {
+                    "results": {
+                        "results": [
+                            {"response": {"output": '{"status":"ok"}'}, "success": True},
+                            None,
+                        ],
+                        "stats": {"errors": 0},
+                    }
+                }
+            ),
+        ),
+    ],
+)
+def test_unusable_output_files_are_runtime_errors(tmp_path, label, content):
+    broken = tmp_path / "output.json"
+    broken.write_text(content, encoding="utf-8")
+    summary = run_summary(broken)
+    assert INCOMPLETE_HEADING in summary, f"{label} 應判為執行期錯誤"
+    assert COMPLETE_HEADING not in summary, f"{label} 不該被宣告完成"
+
+
+# --- 判讀本身：綠的那一側 ----------------------------------------------------
+
+
+def test_answered_run_is_reported_complete_with_real_score():
+    """真的有作答時要說『完成』，並報出這次實際的分數，而不是只複述歷史對照。"""
+    summary = run_summary(ANSWERED)
+    assert COMPLETE_HEADING in summary
+    assert INCOMPLETE_HEADING not in summary
+    assert "本次成績：3/3" in summary
+    assert "qwen2.5:1.5b" in summary
+
+
+def test_score_reflects_actual_failures(tmp_path):
+    """分數要跟著結果走：把其中一題改成失敗，摘要就得報 2/3。
+
+    這條是拿來釘死『成績是算出來的、不是寫死的』——直接印一句固定的 3/3
+    也能讓上面那條過。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    data["results"]["results"][0]["success"] = False
+    downgraded = tmp_path / "output.json"
+    downgraded.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(downgraded)
+    assert "本次成績：2/3" in summary
+    assert COMPLETE_HEADING in summary
+
+
+def test_partial_no_answer_is_excluded_from_the_score(tmp_path):
+    """沒作答的題目不能算進分母——那正是本檔要防的誤讀，只是縮小成部分題目。
+
+    這裡把 3 題裡的 2 題改成沒輸出、沒通過，剩下 1 題答對。誠實的成績是
+    「答了 1 題、對 1 題」；若寫成 1/3 再擺在 gpt-4o-mini 的 3/3 旁邊，
+    讀者只會讀成「小模型爛到只對三分之一」。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    for row in data["results"]["results"][:2]:
+        row["response"]["output"] = ""
+        row["success"] = False
+    partial = tmp_path / "output.json"
+    partial.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(partial)
+    assert COMPLETE_HEADING in summary
+    assert "本次成績：1/1" in summary, "分母要是有作答的題數，不是總題數"
+    assert "本次成績：1/3" not in summary
+    assert "2 筆沒拿到模型輸出，不計分" in summary
+    # 題數仍回推得出 3，但只考到一部分，不能跟歷史的 3 題 3/3 並列
+    assert "曾以這" not in summary
+    assert "沒有可比的對照組" in summary
+
+
+def test_multi_provider_run_does_not_distort_the_numbers(tmp_path):
+    """一列＝一題 ×一個 provider，所以列數不等於題數。
+
+    下面這份 2-provider 輸入是**由真實 fixture 衍生**的（把每一列複製成兩個
+    `provider.label`），不是 promptfoo 實跑的留底——repo 裡沒有 2-provider 的
+    原始 `output.json`。衍生的形狀（6 列、`testIdx` [0,0,1,1,2,2]）與 promptfoo
+    「一列＝一題 ×一個 provider」的文件化行為一致，但**這一點本身未經本 repo
+    留證**，所以不在這裡寫成「實測過」——沒查證過的東西不寫進永久紀錄。
+    （原本這裡引「AGENTS.md『未查證的推測不進永久紀錄』」，但本 repo 的
+    AGENTS.md 沒有這一條，那是別處的規則；寫下一個查不到的出處，本身就是這
+    句話要防的事。）所幸 `countDistinct` 對列的排列順序不敏感，真實順序若是
+    [0,1,2,0,1,2] 結果相同。
+
+    要驗的是：摘要不會把 6 列講成「6 題」，也不會把歷史對照的 3/3 改寫成 6/6。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    rows = data["results"]["results"]
+    doubled = []
+    for row in rows:
+        for label in ("A", "B"):
+            clone = json.loads(json.dumps(row))
+            clone["provider"] = {"id": "file://mock_provider.js", "label": label}
+            doubled.append(clone)
+    data["results"]["results"] = doubled
+    multi = tmp_path / "output.json"
+    multi.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(multi)
+    assert "3 題小樣卷 ×2 個 provider，共 6 筆結果" in summary
+    assert "曾以這 3 題拿 3/3" in summary, "歷史對照的數字是固定事實，不能跟著本次題數變"
+    assert "6 題拿" not in summary
+    assert "本次成績：6/6" in summary
+
+
+def test_partial_no_answer_with_two_providers_states_what_is_missing(tmp_path):
+    """2 個 provider 其中一個整批沒作答（例如 workflow 只拉了第一顆模型）。
+
+    分母是列數不是題數：摘要不能寫成「只有 3 筆拿到輸出」配「3 題全部作答」，
+    讀者會看不出缺的是哪些。要講的是 6 筆裡缺了 3 筆。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    doubled = []
+    for row in data["results"]["results"]:
+        for label in ("A", "B"):
+            clone = json.loads(json.dumps(row))
+            clone["provider"] = {"id": "ollama:chat:x", "label": label}
+            if label == "B":
+                clone["response"]["output"] = ""
+                clone["success"] = False
+            doubled.append(clone)
+    data["results"]["results"] = doubled
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+    assert "本次成績：3/3**（另有 3 筆沒拿到模型輸出，不計分）" in summary
+    assert "6 筆結果裡有 3 筆沒拿到模型輸出" in summary
+    assert "曾以這" not in summary
+
+
+def test_missing_testidx_is_reported_as_unknown_not_as_a_question_count(tmp_path):
+    """`testIdx` 缺席時不可以拿列數冒充題數。
+
+    `countDistinct` 對缺鍵的列用 `#index` 當 key，於是每一列各成一組。單一
+    provider 時這剛好等於題數、看不出問題；**2 個 provider 就會把 3 題 ×2 的
+    6 列報成「6 題」**，而且因為 6 ≠ BASELINE_QUESTIONS，連帶把對照組那段改印
+    成「本次是 6 題」——一個憑空捏造的量測，講得跟真的一樣。那正是這支摘要
+    存在的理由（不要把沒量到的東西講得很篤定）換了個觸發點。
+
+    目前兩份真實 fixture 的每一列都有 `testIdx`，所以這是防禦性守門：沒有這條
+    測試，把 `complete` 那套拿掉也不會有任何東西變紅。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    doubled = []
+    for row in data["results"]["results"]:
+        for label in ("A", "B"):
+            clone = json.loads(json.dumps(row))
+            clone.pop("testIdx", None)
+            clone["provider"] = {"id": "file://mock_provider.js", "label": label}
+            doubled.append(clone)
+    data["results"]["results"] = doubled
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+
+    # **用語意斷言而不是挑幾個字串比對**：字串版只擋得住「我剛好想到的那幾種
+    # 措辭」。實測把對照組那行改寫成「歷史考的是 3 題，這次考了 ${questions} 題」，
+    # 字串版 81 passed 全綠，而摘要兩行內自相矛盾（上一行說無法回推、下一行報 6 題）。
+    # 改成：摘要裡出現的每一個「N 題」，都不可以等於列數。（摘要曾經寫死一句
+    # 「主線 golden 軌為 6 題」，得先剔掉才能這樣檢查；那句已經拿掉——學員照 lab2
+    # 第 4 步在 tests.yaml 加題之後，它在學員自己的 repo 裡就不是事實了。）
+    assert "無法回推題數" in summary, f"沒有講明題數回推不出來：\n{summary}"
+    assert "共 6 筆結果" in summary, "列數是實際數得出來的，仍應照報"
+    claimed = [int(n) for n in re.findall(r"(\d+) 題", summary)]
+    assert len(doubled) not in claimed, (
+        f"題數回推不出來時，摘要不可以出現等於列數（{len(doubled)}）的題數宣稱，"
+        f"實得 {claimed}：\n{summary}"
+    )
+    # 成績是逐列算的，不受題數未知影響，仍要照常印出來。
+    assert "本次成績：6/6" in summary, f"成績不該因為題數未知而消失：\n{summary}"
+
+
+def test_missing_provider_is_reported_as_unknown_count(tmp_path):
+    """`provider` 缺席時同樣不可以拿列數冒充 provider 數。
+
+    `providers` 走的是跟 `questions` 一模一樣的 `countDistinct`，所以有一模一樣
+    的退路問題。上一輪只替 `questions` 補了測試，`providersKnown` 那一半**零
+    覆蓋**——實測把它整套拿掉、退回舊的 `providers > 1`，全套 81 passed 全綠。
+    同一個 commit 對兩半採不同的舉證標準，這條把它補齊。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    for row in data["results"]["results"]:
+        row.pop("provider", None)
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+
+    assert "×未知數量的 provider" in summary, (
+        f"provider 回推不出來時要講明，不能拿每列各算一個的退路當數字：\n{summary}"
+    )
+    rows = len(data["results"]["results"])
+    assert f"×{rows} 個 provider" not in summary, (
+        f"把 {rows} 列各算成一個 provider 了：\n{summary}"
+    )
+
+
+def test_baseline_comparison_is_dropped_when_the_question_count_changes(tmp_path):
+    """題數不是 3 時就沒有可比的對照組，不能照樣印 3/3。"""
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    data["results"]["results"] = data["results"]["results"][:2]
+    two = tmp_path / "output.json"
+    two.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(two)
+    assert "沒有可比的對照組" in summary
+    # 「3/3」本身可以出現在說明為什麼不可比的那句話裡；不能出現的是把它
+    # 當成本次同卷對照的宣稱。
+    assert "曾以這" not in summary
+    assert "本次成績：2/2" in summary
+
+
+def test_baseline_comparison_is_dropped_for_more_questions_too(tmp_path):
+    """題數多於 3 時也不可比——上一條只用 2 題，`===` 寫成 `>=` 仍會過。
+
+    學員照 lab2 在小樣卷加題就是這個情境：4 題的成績旁邊印「曾以這 3 題拿
+    3/3」，等於拿不同考卷的分數並列。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    rows = data["results"]["results"]
+    extra = json.loads(json.dumps(rows[0]))
+    extra["testIdx"] = len(rows)
+    rows.append(extra)
+    four = tmp_path / "output.json"
+    four.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(four)
+    assert "4 題小樣卷" in summary
+    assert "沒有可比的對照組" in summary
+    assert "曾以這" not in summary
+
+
+def test_row_count_is_shown_when_it_differs_from_question_count(tmp_path):
+    """單一 provider、同一題出現兩列時，要把列數講出來。
+
+    不講的話畫面是「2 題小樣卷」配「本次成績 3/3」，分母比題數還大卻沒有解釋
+    （summarize_eval.js 裡 `rows.length !== questions` 那個判準）。多 provider
+    的情境由 test_multi_provider_run_does_not_distort_the_numbers 守，那裡
+    `providers > 1` 本身就成立，所以擋不住這個判準被拿掉。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    rows = data["results"]["results"]
+    rows[2]["testIdx"] = rows[1]["testIdx"]
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+    assert "2 題小樣卷，共 3 筆結果" in summary
+    assert "個 provider" not in summary
+
+
+@pytest.mark.parametrize(
+    ("label", "output", "counts_as_answered"),
+    [
+        ("純空白", "   \n", False),
+        ("null", None, False),
+        ("物件", {"status": "ok"}, True),
+        ("空陣列", [], True),
+    ],
+)
+def test_what_counts_as_an_answer(tmp_path, label, output, counts_as_answered):
+    """`answered()` 檔內註解宣稱的四種邊界：空白與 null 不算作答，非字串算。
+
+    做法是把第一題換成該輸出、其餘兩題照常作答，看它有沒有被排除在分母外。
+    """
+    data = json.loads(ANSWERED.read_text(encoding="utf-8"))
+    data["results"]["results"][0]["response"]["output"] = output
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+    if counts_as_answered:
+        assert "本次成績：3/3" in summary, f"{label} 應算作答：\n{summary}"
+        assert "沒拿到模型輸出" not in summary
+    else:
+        assert "本次成績：2/2" in summary, f"{label} 不應算作答：\n{summary}"
+        assert "1 筆沒拿到模型輸出，不計分" in summary
+        # 只缺 1 筆也是部分作答（守 `unanswered > 0` 的邊界）：不能並列歷史的 3/3
+        assert "曾以這" not in summary
+        assert "沒有可比的對照組" in summary
+
+
+def test_wording_matches_whether_promptfoo_logged_errors(tmp_path):
+    """全部沒作答時，措辭要跟著 stats.errors 走，不能兩種狀態講同一句話。
+
+    errors=0（假 Ollama 回 404）時 promptfoo 記的是斷言失敗；errors>0（打不到
+    服務）時記的是 ERROR。原本無條件說「記成斷言失敗」，在後者會自相矛盾。
+    """
+    data = json.loads(PROVIDER_ERROR.read_text(encoding="utf-8"))
+    assert "記成斷言失敗" in run_summary(PROVIDER_ERROR)
+
+    data["results"]["stats"]["errors"] = len(data["results"]["results"])
+    errored = tmp_path / "output.json"
+    errored.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(errored)
+    assert "記成 ERROR" in summary
+    assert "記成斷言失敗" not in summary
+
+
+def test_summarizer_crash_is_reported_not_swallowed(tmp_path):
+    """判讀自己丟例外時也要印出『未完成』並以 0 結束（run_summary 會驗離開碼）。
+
+    觸發方式：testIdx 是一個 toString 不可呼叫的物件，`String(key)` 會丟
+    TypeError。promptfoo 正常不會寫出這種值——這條守的是檔頭「一律以 0 結束」
+    那句話，不是某個已知的 promptfoo 行為。
+    """
+    data = {
+        "results": {
+            "results": [
+                {
+                    "testIdx": {"toString": 1},
+                    "response": {"output": '{"status":"ok"}'},
+                    "success": True,
+                }
+            ],
+            "stats": {"errors": 0},
+        }
+    }
+    target = tmp_path / "output.json"
+    target.write_text(json.dumps(data), encoding="utf-8")
+    summary = run_summary(target)
+    assert INCOMPLETE_HEADING in summary
+    assert COMPLETE_HEADING not in summary
+    assert "本次成績" not in summary
+    assert "診斷：" in summary
+
+
+# --- workflow 真的有在用這支程式嗎 -------------------------------------------
+
+
+WORKFLOW = REPO_ROOT / ".github" / "workflows" / "eval-local.yml"
+
+
+def test_workflow_calls_the_summarizer():
+    """判讀再準，workflow 沒呼叫它也是白搭（這正是它上一版的失效方式）。"""
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert "node summarize_eval.js output.json" in workflow
+    assert "working-directory: labs/lab2-golden-eval" in workflow
+
+
+def test_eval_is_time_boxed_inside_its_step():
+    """評測要自己控時，而且要留得下寫摘要的時間。
+
+    step 層的 timeout-minutes 先觸發時 GitHub 會砍掉整個 run block，判讀與
+    step summary 一行都不會執行——本檔在 job 層特別防的就是這件事，這一步
+    才是最可能吃滿時間的那層。所以 `timeout N` 必須存在、且嚴格小於本步驟的
+    timeout-minutes（留給判讀的餘裕）。
+    """
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    seconds = re.search(r"^\s*timeout (\d+) npx .*promptfoo.* eval\b", workflow, re.MULTILINE)
+    assert seconds, "評測指令必須用 `timeout <秒> npx … promptfoo … eval` 自己控時"
+
+    step = workflow.split("- name: 本地模型評測", 1)
+    assert len(step) == 2, "找不到『本地模型評測』這個 step——測試已對不上 workflow"
+    step_minutes = re.search(r"^\s*timeout-minutes:\s*(\d+)", step[1], re.MULTILINE)
+    assert step_minutes, "『本地模型評測』step 應保留 timeout-minutes 當第二道保險"
+    assert int(seconds.group(1)) < int(step_minutes.group(1)) * 60, (
+        f"自控 timeout {seconds.group(1)}s 沒有小於 step 的 "
+        f"{step_minutes.group(1)} 分鐘，摘要仍會被 GitHub 砍掉"
+    )
+
+
+def eval_step_run_block():
+    """取出「本地模型評測」step 的 run block（去掉 YAML 的縮排）。"""
+    lines = WORKFLOW.read_text(encoding="utf-8").splitlines()
+    start = next(
+        (i for i, ln in enumerate(lines) if ln.strip().startswith("- name: 本地模型評測")), None
+    )
+    assert start is not None, "找不到『本地模型評測』這個 step——測試已對不上 workflow"
+    run = next(
+        (i for i in range(start + 1, len(lines)) if lines[i].strip() == "run: |"), None
+    )
+    assert run is not None, "『本地模型評測』step 應該是 `run: |` 的多行 block"
+    key_indent = len(lines[run]) - len(lines[run].lstrip())
+    body = []
+    for ln in lines[run + 1 :]:
+        if ln.strip() and len(ln) - len(ln.lstrip()) <= key_indent:
+            break
+        body.append(ln)
+    indent = min(len(ln) - len(ln.lstrip()) for ln in body if ln.strip())
+    return "\n".join(ln[indent:] for ln in body) + "\n"
+
+
+# 假的 timeout：把 `-o <檔名>` 指定的檔案寫成一個記號，再以 FAKE_EXIT 結束。
+# 假的 node：印出它拿到的那個檔案的內容，以 FAKE_NODE_EXIT 結束。
+# 兩者一起驗「promptfoo 寫到哪、判讀就讀哪」：檔名對不上時記號不會出現在摘要裡。
+FAKE_TIMEOUT = """#!/bin/sh
+out=""
+prev=""
+for arg in "$@"; do
+  [ "$prev" = "-o" ] && out="$arg"
+  prev="$arg"
+done
+[ -n "$out" ] && echo "FAKE_OUTPUT_FROM_PROMPTFOO" > "$out"
+exit "${FAKE_EXIT:-0}"
+"""
+FAKE_NODE = """#!/bin/sh
+cat "$2" 2>/dev/null || echo "NODE_COULD_NOT_READ $2"
+exit "${FAKE_NODE_EXIT:-0}"
+"""
+# 假的 curl：只有打的是 Ollama 的預設埠、而且帶了 -f（HTTP 錯誤要算失敗）時，才回
+# FAKE_CURL_EXIT；其他呼叫一律當成連不上（7）。不看引數的話，workflow 把探測的
+# 埠打錯，所有非零評測都會被報成「基礎設施故障」，這裡卻照樣全綠。
+FAKE_CURL = """#!/bin/sh
+url=no
+fail=no
+for arg in "$@"; do
+  case "$arg" in
+    http://localhost:11434/*) url=yes ;;
+    --fail) fail=yes ;;
+    --*) ;;
+    -*f*) fail=yes ;;
+  esac
+done
+[ "$url" = yes ] && [ "$fail" = yes ] || exit 7
+exit "${FAKE_CURL_EXIT:-0}"
+"""
+# 假的 npx：run block 裡的 npx 本來就該包在 timeout 裡、由假 timeout 接手。走到這裡
+# 代表 workflow 改了控時寫法——不擋的話，測試會真的從網路下載 promptfoo 去打本機的
+# 11434（開發機上可能有真的 Ollama）。直接以 97 結束，讓離開碼斷言變紅。
+FAKE_NPX = """#!/bin/sh
+echo "測試替身：npx 沒有經過 timeout 就被呼叫了：$*" >&2
+exit 97
+"""
+BASH = shutil.which("bash")
+
+
+# Windows 本機直接跳過，不賭環境：`which("bash")` 可能先找到 System32 的 WSL bash
+# （讀不懂 Windows 路徑），而 write_text 在 Windows 會寫出 CRLF，假指令的 shebang
+# 變成 `#!/bin/sh\r`。兩者都會整批假紅、跟 workflow 對錯無關。這條守的是
+# Actions（ubuntu）上的 bash 行為，quality.yml 的 lint-test 一定會跑到。
+@pytest.mark.skipif(
+    BASH is None or os.name == "nt",
+    reason="需要 POSIX 環境的 bash 才能照 Actions 的方式執行 run block（CI 上一定會跑）",
+)
+@pytest.mark.parametrize(
+    ("label", "promptfoo_exit", "ollama_alive", "node_exit", "expect_in", "expect_not_in"),
+    [
+        ("全過", 0, True, 0, ["FAKE_OUTPUT_FROM_PROMPTFOO"], ["離開碼", "逾時", "基礎設施"]),
+        # 全過之後 daemon 是死是活不影響結果，不能印「未完成」配綠燈
+        ("全過但 Ollama 事後已死", 0, False, 0, ["FAKE_OUTPUT_FROM_PROMPTFOO"], ["基礎設施"]),
+        ("有題目沒過", 100, True, 0, ["FAKE_OUTPUT_FROM_PROMPTFOO"], ["離開碼", "逾時"]),
+        ("逾時", 124, True, 0, ["評測逾時"], ["FAKE_OUTPUT_FROM_PROMPTFOO"]),
+        # 逾時當下 daemon 也死了（例如推論中途 OOM）：仍要先報逾時，摘要裡才有調高上限的指示
+        ("逾時且 Ollama 已死", 124, False, 0, ["評測逾時"], ["基礎設施", "FAKE_OUTPUT_FROM_PROMPTFOO"]),
+        ("Ollama 中途死亡", 100, False, 0, ["基礎設施故障"], ["FAKE_OUTPUT_FROM_PROMPTFOO"]),
+        ("promptfoo 異常結束", 1, True, 0, ["離開碼 1", "FAKE_OUTPUT_FROM_PROMPTFOO"], []),
+        ("判讀程式自己失敗", 100, True, 1, ["FAKE_OUTPUT_FROM_PROMPTFOO"], []),
+    ],
+)
+def test_eval_step_keeps_promptfoo_exit_code_and_writes_summary(
+    tmp_path, label, promptfoo_exit, ollama_alive, node_exit, expect_in, expect_not_in
+):
+    """照 Actions 的方式（`bash -e`，沒有 pipefail）實跑那段 run block。
+
+    這段 shell 的控制流程才是「紅了一眼看出哪一關」的本體，只用子字串檢查擋不住：
+    拿掉 `|| EXIT=$?`，`bash -e` 會在 promptfoo 非零時當場中止，摘要一個字都不寫；
+    把 `exit "$EXIT"` 換掉，step 的紅綠就不再跟著 promptfoo 走。這裡把 timeout／
+    curl／node／npx 換成只偽造離開碼的假指令（npx 被直接呼叫就紅，見 FAKE_NPX），驗 step 的離開碼與 step summary 的內容；
+    對措辭改動不敏感，只綁定各分支的關鍵字。
+    """
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fakes = (
+        ("timeout", FAKE_TIMEOUT), ("node", FAKE_NODE), ("curl", FAKE_CURL), ("npx", FAKE_NPX)
+    )
+    for name, body in fakes:
+        script = fake_bin / name
+        script.write_text(body, encoding="utf-8")
+        script.chmod(0o755)
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    summary_file = tmp_path / "step_summary.md"
+    summary_file.write_text("", encoding="utf-8")
+    script = tmp_path / "step.sh"
+    script.write_text(eval_step_run_block(), encoding="utf-8")
+
+    # PATH 只給替身與系統基本指令，不接使用者的 PATH：run block 若呼叫了沒被替換的
+    # 指令，寧可找不到而紅，也不要真的執行。逾時時殺整個行程群組，不留孤兒。
+    proc = subprocess.Popen(
+        [BASH, "-e", str(script)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=str(workdir),
+        env={
+            "PATH": f"{fake_bin}{os.pathsep}/usr/bin{os.pathsep}/bin",
+            "GITHUB_STEP_SUMMARY": str(summary_file),
+            "FAKE_EXIT": str(promptfoo_exit),
+            "FAKE_CURL_EXIT": "0" if ollama_alive else "7",
+            "FAKE_NODE_EXIT": str(node_exit),
+        },
+        start_new_session=True,
+    )
+    try:
+        out, err = proc.communicate(timeout=30)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        out, err = proc.communicate()
+        pytest.fail(f"{label}：run block 30 秒內沒有結束（已殺掉整個行程群組）")
+    stdout = out.decode("utf-8", errors="replace")
+    stderr = err.decode("utf-8", errors="replace")
+    summary = summary_file.read_text(encoding="utf-8")
+    assert proc.returncode == promptfoo_exit, (
+        f"{label}：step 的離開碼應該等於 promptfoo 的 {promptfoo_exit}，實得 "
+        f"{proc.returncode}\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    )
+    for text in expect_in:
+        assert text in summary, f"{label}：step summary 應包含「{text}」：\n{summary}"
+    for text in expect_not_in:
+        assert text not in summary, f"{label}：step summary 不應包含「{text}」：\n{summary}"
+    # 判讀程式失敗時要在 job log 留下註記；其他情境不該出現
+    warned = "::warning::" in stdout
+    assert warned == (node_exit != 0), (
+        f"{label}：job log 的 ::warning:: 應該{'出現' if node_exit else '不出現'}：\n{stdout}"
+    )

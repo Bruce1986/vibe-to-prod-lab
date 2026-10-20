@@ -3,7 +3,9 @@
 // 與 app/llm_client.py 的 FakeLLMClient 遵守同一條規則：
 // 渲染後的 prompt 含關鍵約束句「配料只能使用菜單」→ 回放 good 變體；
 // 否則回放 sloppy 變體——用來模擬「prompt 品質影響輸出品質」的回歸情境。
-// （這是教學模擬器；真實世界的 prompt 評測請對真模型跑，見 /live-eval 加分關。）
+// （這是教學模擬器；真實世界的 prompt 評測要對真模型跑。/local-eval 加分關示範的是
+// 同一份 golden 換模型重考：07-16 首測時它的 1.5B 小模型在原版 prompt 下就已經在
+// 誘餌題上當，看不出這一行約束的作用，見 lab2 README 第 3 步。）
 const fs = require('fs');
 const path = require('path');
 
