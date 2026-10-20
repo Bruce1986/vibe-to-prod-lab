@@ -81,7 +81,8 @@ push 後 `golden-eval` 仍綠即驗收。
   看到 ⚠️ 就重跑，別當成模型品質訊號。
 - 想加碼：把 `promptfooconfig.local.yaml` 的模型換成 `qwen2.5:3b` 再跑一次
   （workflow 會照 config 裡寫的模型名去 pull，改一個地方就好；3b 比較慢，
-  CPU 推論多等幾分鐘是正常的）。
+  CPU 推論多等幾分鐘是正常的；3b 沒有實測過，評測步驟有 8 分鐘上限，摘要若是
+  「評測逾時」就是超過上限、不是模型答錯，調高上限的方法寫在摘要裡）。
 
 > 歷史註記：本關最初用 GitHub Models 免費推論（2026-07-30 已退役）。
 > golden set 與 provider 解耦，題目與 prompt 一字未改，斷言要驗的東西也一樣
