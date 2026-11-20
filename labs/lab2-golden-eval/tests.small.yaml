@@ -1,0 +1,105 @@
+# 加分關小樣卷：3 筆——本地小模型（/local-eval）或任何真模型都考這一份。
+# 真模型的輸出「不保證」通過契約——紅色不是壞事，是「不可預測性被量測到」
+# 的證據；加分關是 monitor 不是 gate，不會擋部署。
+# 歷史對照：雲端 gpt-4o-mini 曾拿 3/3（2026-07-15）；qwen2.5:1.5b 首測 1/3。
+#
+# 語意斷言全部防禦性寫法：小模型常夾帶 ```json 圍欄或輸出殘缺結構，
+# 讓斷言優雅地 false（Fail）而不是拋例外（Error）；格式壞掉本身
+# 仍由 defaultTest 的 is-json＋schema 契約斷言負責回報。
+#
+# 為什麼要掃平衡花括號、而不是一行 output.match(/\{[\s\S]*\}/)：
+# 貪婪比對抓的是「第一個 { 到最後一個 }」。小模型很常覆誦 prompt 裡內建的
+# 兩段格式範例、或先吐草稿再給正式答案；這時貪婪比對會把兩段 JSON 連同中間
+# 的中文說明黏成一串，JSON.parse 直接拋例外→這條語意斷言判 Fail。那是抽取器
+# 的失誤，不是模型答錯。改成掃出所有頂層 {...} 候選、取「最後一個 parse 得動
+# 的」＝模型的正式答案。
+#
+# 這影響的是**逐條斷言的明細**，不是整題的 Pass/Fail：輸出只要不是純 JSON
+# （前後有散文、包在 ```json 圍欄裡），defaultTest 的 is-json 就先掛，整題本來
+# 就是 Fail，語意斷言抽得再準也救不回來（promptfoo 0.121.19 實測：散文＋正確
+# JSON、圍欄＋正確 JSON 兩種輸出，都是 is-json 掛、語意斷言過、整題 Fail）。
+# 抽準的用處在逐條明細：抽取器失誤會把「只有格式錯」的題目記成「格式錯、
+# 內容也錯」。注意這份明細目前只存在 output.json 的
+# gradingResult.componentResults 裡——promptfoo 印在 job log 的表格每題只有
+# [PASS]／[FAIL] 加模型原始輸出，summarize_eval.js 的摘要也只報總分，
+# workflow 沒有上傳 output.json。學員在 Actions 頁面上看不到「掛在哪一條」。
+#
+# 掃描器的兩個細節（第 1 點被 tests/test_local_eval_asserts.py 實際驗證過；
+# 第 2 點拿掉後該檔現有案例仍全綠）：
+#   1. 只有進入某個候選物件（depth > 0）之後才追蹤字串狀態。否則物件「之前」
+#      的散文裡若有一個未配對的半形引號，狀態會被扳成「字串內」，後面真正的
+#      JSON 花括號全被當成字串內容跳過，整個物件抽不到——又變成抽取器的失誤
+#      被記成語意斷言 Fail。
+#   2. 每掃完一個候選物件就把字串狀態歸零，不讓它污染下一個候選。
+# 三處重複這段掃描，且**必須逐字相同**——改一份就要同步改另外兩份，
+# 否則只有被測到的那一份是對的（tests/test_local_eval_asserts.py 的
+# test_three_scanners_stay_byte_identical 會在不同步時變紅）。
+# 之所以重複：promptfoo 的每條 assert 各自求值，本 repo 未查證
+# `type: javascript` 的 value 是否支援 file:// 指到共用檔（provider 欄位是
+# 支援的），要精簡請自行實測後再改，別當成已知限制。
+- description: 基本訂單（真模型版）
+  vars:
+    input: 我要一杯大杯珍珠奶茶，半糖少冰
+  assert:
+    - type: javascript
+      value: |
+        const cands = []; let depth = 0, start = -1, inStr = false, esc = false;
+        for (let i = 0; i < output.length; i++) {
+          const c = output[i];
+          if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }
+          if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+          if (c === '"') { inStr = true; continue; }
+          if (c === '{') { depth++; }
+          else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }
+        }
+        let obj = null;
+        for (let i = cands.length - 1; i >= 0 && obj === null; i--) {
+          try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }
+        }
+        return obj?.items?.[0]?.sweetness === 50;
+
+- description: 幻覺配料誘餌（真模型版）
+  vars:
+    input: 一杯大杯珍珠奶茶全糖去冰，加跳跳糖
+  assert:
+    - type: javascript
+      value: |
+        const cands = []; let depth = 0, start = -1, inStr = false, esc = false;
+        for (let i = 0; i < output.length; i++) {
+          const c = output[i];
+          if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }
+          if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+          if (c === '"') { inStr = true; continue; }
+          if (c === '{') { depth++; }
+          else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }
+        }
+        let obj = null;
+        for (let i = cands.length - 1; i >= 0 && obj === null; i--) {
+          try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }
+        }
+        // 沒抽到任何物件＝格式壞到讀不出訂單，判 Fail（不能算「沒點跳跳糖」）；
+        // toppings 缺漏或不是陣列則代表模型沒把跳跳糖寫進配料，那是正解。
+        if (obj === null) { return false; }
+        const toppings = obj?.items?.[0]?.toppings;
+        return !(Array.isArray(toppings) && toppings.includes('跳跳糖'));
+
+- description: 模糊輸入要反問（真模型版）
+  vars:
+    input: 來點好喝的
+  assert:
+    - type: javascript
+      value: |
+        const cands = []; let depth = 0, start = -1, inStr = false, esc = false;
+        for (let i = 0; i < output.length; i++) {
+          const c = output[i];
+          if (depth === 0) { if (c === '{') { depth = 1; start = i; inStr = false; esc = false; } continue; }
+          if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+          if (c === '"') { inStr = true; continue; }
+          if (c === '{') { depth++; }
+          else if (c === '}' && --depth === 0) { cands.push(output.slice(start, i + 1)); inStr = false; esc = false; }
+        }
+        let obj = null;
+        for (let i = cands.length - 1; i >= 0 && obj === null; i--) {
+          try { obj = JSON.parse(cands[i]); } catch (e) { /* 不是完整物件，往前試 */ }
+        }
+        return obj?.status === 'need_clarification';

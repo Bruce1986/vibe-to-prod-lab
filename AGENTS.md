@@ -25,7 +25,7 @@ labs/           三個 lab 的學員導引（每個資料夾都有自己的 READ
 slides/         Marp 投影片（CI 自動建置發佈 GitHub Pages）
 docs/           深讀講義與講師設定文件
 templates/      學員帶回自家專案用的範本（AGENTS.sample.md、pr-checklist、CI 範本）
-.claude/skills/ 自訂指令：/course-help /lab1 /lab2 /lab3 /live-eval
+.claude/skills/ 自訂指令：/course-help /lab1 /lab2 /lab3 /local-eval
                 （Claude Code 與 VS Code Copilot 都會讀取這個目錄）
 ```
 
@@ -35,8 +35,8 @@ templates/      學員帶回自家專案用的範本（AGENTS.sample.md、pr-che
 - Lint：`ruff check app tests labs`
 - Golden eval（本機選配，需 Node）：
   `npx promptfoo@0.121.19 eval -c labs/lab2-golden-eval/promptfooconfig.yaml`
-- 加分關（免 key 打真 LLM，在 GitHub Actions 上跑）：
-  `gh workflow run eval-live.yml`，或用自訂指令 `/live-eval`
+- 加分關（零 token 跑真 LLM——本地小模型在 CI runner 上）：
+  `gh workflow run eval-local.yml`，或用自訂指令 `/local-eval`
 
 ## 工作守則（Rules）
 

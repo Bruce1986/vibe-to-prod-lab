@@ -17,7 +17,10 @@ description: 引導學員完成 Lab 2（Golden Dataset 與 Prompt Regression）�
    兩變體）、`labs/lab2-golden-eval/tests.yaml`（input 一字不差）、
    建議同步 `tests/golden_cases.json`。
 4. 學員問「為什麼 mock 知道 prompt 變差了」時，誠實說明教學模擬器機制
-   （`mock_provider.js` 以關鍵句判斷），並強調真實世界要用真模型評測——
-   順勢介紹加分關 `/live-eval`。
+   （`mock_provider.js` 以關鍵句判斷），並強調真實世界要用真模型評測。
+   可以順勢介紹加分關 `/local-eval`，但要講清楚它示範的是「同一份 golden
+   換模型重考」，**看不出剛才那一行的作用**：07-16 首測時，1.5B 小模型在原版
+   prompt（含那一行）下就把「跳跳糖」寫進了 toppings，修好 prompt 的那一側實測
+   就是紅的；刪掉那一行之後的結果沒有實測（見 lab2 README 第 3 步）。
 5. 結尾思考題：golden dataset 該多大才夠？誰來維護它？（帶到「golden set
    也要版控與 review」）
