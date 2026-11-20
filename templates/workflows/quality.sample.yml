@@ -7,6 +7,14 @@ on:
     branches: [main]
   pull_request:
 
+# 明寫最小權限：這三關都只需要讀 repo。不寫的話 GITHUB_TOKEN 沿用 repo 設定的
+# 預設值（有些 repo／組織預設可寫），而 pip install／npx 跑的是第三方程式碼。
+# 之後在 deploy-gate 接真的部署時，只替那個 job 加它需要的權限，不要把整份 workflow
+# 放寬。注意 job 層的 permissions 會整個取代這裡、不是疊加：要全部列出，例如 Pages 要
+# `contents: read`＋`pages: write`＋`id-token: write`（同 repo 的 slides.yml 就是這樣寫）。
+permissions:
+  contents: read
+
 jobs:
   lint-test:
     runs-on: ubuntu-latest
